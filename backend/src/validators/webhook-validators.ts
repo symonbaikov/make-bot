@@ -7,6 +7,7 @@ export const botWebhookSchema = z.object({
   tgUserId: z.string().min(1, 'Telegram user ID is required'),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
+  phoneNumber: z.string().optional(),
   plan: z.nativeEnum(Plan, {
     errorMap: () => ({ message: 'Invalid plan' }),
   }),

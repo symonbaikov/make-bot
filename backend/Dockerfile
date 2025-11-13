@@ -29,14 +29,24 @@ COPY tsconfig.json ./
 # Build backend
 WORKDIR /app/backend
 RUN npm run db:generate
-# Use --noEmit false to generate JS files, ignore type errors for production build
-RUN npx tsc --skipLibCheck --noEmit false || echo "TypeScript compilation completed with warnings"
+# Build TypeScript to JavaScript - must succeed or fail the build
+RUN npm run build
 
 # Production stage
 FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+
+# Install OpenSSL for Prisma (required for linux-musl binary)
+
+# Alpine uses OpenSSL 3.x, Prisma needs 1.1.x - use compatibility layer
+RUN apk add --no-cache openssl && \
+    mkdir -p /usr/lib && \
+    (test -f /usr/lib/libssl.so.3 && ln -sf /usr/lib/libssl.so.3 /usr/lib/libssl.so.1.1 || true) && \
+    (test -f /usr/lib/libcrypto.so.3 && ln -sf /usr/lib/libcrypto.so.3 /usr/lib/libcrypto.so.1.1 || true) && \
+    (test -f /lib/libssl.so.3 && ln -sf /lib/libssl.so.3 /lib/libssl.so.1.1 || true) && \
+    (test -f /lib/libcrypto.so.3 && ln -sf /lib/libcrypto.so.3 /lib/libcrypto.so.1.1 || true)
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs

@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 import { sessionMiddleware, BotContext } from './middleware/session-middleware';
 import { handleStart } from './handlers/start-handler';
 import { handleEmailInput } from './handlers/email-handler';
+import { handleFirstNameInput, handleLastNameInput } from './handlers/name-handler';
+import { handlePhoneNumberInput } from './handlers/phone-handler';
 import { handleHelp } from './handlers/help-handler';
 import { handleError } from './handlers/error-handler';
 import { logger } from './utils/logger';
@@ -32,13 +34,19 @@ bot.catch((err, ctx) => {
 bot.start(handleStart);
 bot.help(handleHelp);
 
-// Text messages (email input)
+// Text messages (data collection)
 bot.on('text', async ctx => {
-  // Check if user is waiting for email
+  // Check what data we're waiting for
   if (ctx.session?.waitingForEmail) {
     await handleEmailInput(ctx);
+  } else if (ctx.session?.waitingForFirstName) {
+    await handleFirstNameInput(ctx);
+  } else if (ctx.session?.waitingForLastName) {
+    await handleLastNameInput(ctx);
+  } else if (ctx.session?.waitingForPhoneNumber) {
+    await handlePhoneNumberInput(ctx);
   } else {
-    // If not waiting for email, suggest using /start
+    // If not waiting for any data, suggest using /start
     await ctx.reply(
       '👋 Please use /start to begin.\n\n' +
         'If you have a session ID, use:\n' +

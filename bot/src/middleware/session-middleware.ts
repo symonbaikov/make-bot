@@ -7,7 +7,13 @@ export interface BotSession {
   amount?: number;
   currency?: string;
   waitingForEmail?: boolean;
+  waitingForFirstName?: boolean;
+  waitingForLastName?: boolean;
+  waitingForPhoneNumber?: boolean;
   email?: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
 }
 
 export interface BotContext extends Context {

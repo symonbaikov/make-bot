@@ -28,6 +28,7 @@ export class UserService {
     email?: string;
     firstName?: string;
     lastName?: string;
+    phoneNumber?: string;
     tgUserId?: string;
   }): Promise<User> {
     return prisma.user.create({
@@ -40,6 +41,7 @@ export class UserService {
     email?: string;
     firstName?: string;
     lastName?: string;
+    phoneNumber?: string;
   }): Promise<User> {
     return prisma.user.upsert({
       where: { tgUserId: data.tgUserId },
@@ -47,6 +49,7 @@ export class UserService {
         email: data.email,
         firstName: data.firstName,
         lastName: data.lastName,
+        phoneNumber: data.phoneNumber,
       },
       create: data,
     });
@@ -56,6 +59,7 @@ export class UserService {
     email?: string;
     firstName?: string;
     lastName?: string;
+    phoneNumber?: string;
   }): Promise<User> {
     const user = await this.findById(id);
     if (!user) {

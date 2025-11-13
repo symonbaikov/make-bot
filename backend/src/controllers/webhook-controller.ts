@@ -24,6 +24,7 @@ export class WebhookController {
       tgUserId: data.tgUserId,
       firstName: data.firstName,
       lastName: data.lastName,
+      phoneNumber: data.phoneNumber,
     });
 
     // Send webhook to Make
@@ -33,6 +34,7 @@ export class WebhookController {
       tgUserId: data.tgUserId,
       firstName: data.firstName,
       lastName: data.lastName,
+      phoneNumber: data.phoneNumber,
       plan: data.plan,
       amount: data.amount,
     });
@@ -40,7 +42,7 @@ export class WebhookController {
     sendSuccess(res, {
       sessionId: session.sessionId,
       status: session.status,
-      message: 'Email collected successfully',
+      message: 'User data collected successfully',
     });
   });
 

@@ -85,6 +85,7 @@ export class SessionService {
     tgUserId?: string;
     firstName?: string;
     lastName?: string;
+    phoneNumber?: string;
     meta?: Record<string, unknown>;
   }): Promise<Session> {
     // Find or create user if tgUserId provided
@@ -96,12 +97,14 @@ export class SessionService {
           email: data.emailUser,
           firstName: data.firstName,
           lastName: data.lastName,
+          phoneNumber: data.phoneNumber,
         },
         create: {
           tgUserId: data.tgUserId,
           email: data.emailUser,
           firstName: data.firstName,
           lastName: data.lastName,
+          phoneNumber: data.phoneNumber,
         },
       });
       userId = user.id;

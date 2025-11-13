@@ -95,6 +95,7 @@ export class MakeService {
     tgUserId: string;
     firstName?: string;
     lastName?: string;
+    phoneNumber?: string;
     plan: string;
     amount: number;
   }): Promise<void> {

@@ -17,6 +17,7 @@ export interface UserData {
   firstName?: string;
   lastName?: string;
   email?: string;
+  phoneNumber?: string;
 }
 
 export interface BotWebhookPayload {
@@ -25,6 +26,7 @@ export interface BotWebhookPayload {
   tgUserId: string;
   firstName?: string;
   lastName?: string;
+  phoneNumber?: string;
   plan: 'BASIC' | 'STANDARD' | 'PREMIUM';
   amount: number;
 }
