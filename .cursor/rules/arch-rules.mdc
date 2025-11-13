@@ -1,0 +1,431 @@
+---
+alwaysApply: true
+---
+
+# Architectural Rules & Principles
+
+## Core Principles
+
+### Separation of Concerns
+
+- **Controllers** handle HTTP requests/responses only
+- **Services** contain all business logic
+- **Models/Repositories** handle data access only
+- **Utils** contain pure functions without side effects
+- Never mix concerns - each layer has a single responsibility
+
+### Dependency Injection
+
+- Services should receive dependencies via constructor or parameters
+- Avoid global state and singletons
+- Use dependency injection for database connections, external APIs, configs
+- Make dependencies explicit and testable
+
+### Error Handling
+
+- Always use try-catch for async operations
+- Create custom error classes extending Error
+- Return consistent error response format: `{ success: false, error: { message, code } }`
+- Log errors with full context (session_id, user_id, timestamp)
+- Never expose internal error details to clients
+
+### Data Validation
+
+- Validate ALL input data at controller level using Zod/Joi
+- Validate database constraints at schema level
+- Sanitize user input to prevent injection attacks
+- Return clear, user-friendly validation error messages
+- Never trust client-side validation alone
+
+## Backend Rules
+
+### API Design
+
+- Use RESTful conventions for admin endpoints
+- Webhook endpoints accept POST only
+- Return consistent response format: `{ success: boolean, data?: T, error?: { message: string, code?: string } }`
+- Use proper HTTP status codes:
+  - `200` - Success (GET, PUT, PATCH)
+  - `201` - Created (POST)
+  - `400` - Bad Request (validation errors)
+  - `401` - Unauthorized (missing/invalid token)
+  - `403` - Forbidden (insufficient permissions)
+  - `404` - Not Found
+  - `500` - Internal Server Error
+- Implement pagination for all list endpoints: `?page=1&limit=20`
+- Use query parameters for filtering/searching, not request body
+
+### Database Operations
+
+- Always use transactions for multi-step operations
+- Use ORM methods, avoid raw SQL unless necessary
+- Add database indexes for frequently queried columns
+- Use connection pooling (configured in ORM)
+- Never expose database errors directly to clients
+- Use soft deletes where appropriate (add `deleted_at` column)
+
+### Service Layer Rules
+
+- Services should be stateless (no instance state)
+- One service per domain entity (UserService, PaymentService, etc.)
+- Services can call other services, but avoid circular dependencies
+- Business logic belongs in services, not controllers
+- Services should return domain objects, not database models
+
+### Controller Rules
+
+- Controllers should be thin - validate input, call service, format response
+- Maximum 3-5 lines of logic per controller method
+- Extract complex validation to separate validator functions
+- Use middleware for cross-cutting concerns (auth, logging, rate limiting)
+
+### Webhook Handling
+
+- Always verify webhook signatures (PayPal, Telegram)
+- Implement idempotency checks (use txn_id, session_id)
+- Log all webhook events to actions table
+- Handle webhook failures gracefully with retry logic
+- Never process webhooks synchronously - use queues for heavy operations
+
+### Authentication & Authorization
+
+- Use JWT tokens for admin authentication
+- Store password hashes with bcrypt (minimum 10 salt rounds)
+- Validate JWT on every protected route using middleware
+- Never store passwords in plain text
+- Implement token refresh mechanism
+- Use role-based access control (RBAC) for admin endpoints
+
+## Frontend Rules
+
+### Component Structure
+
+- One component per file
+- Use functional components with hooks
+- Keep components small and focused (max 200 lines)
+- Extract reusable logic to custom hooks
+- Use composition over inheritance
+
+### State Management
+
+- Use React Query for server state (API data)
+- Use Zustand/Context for client state (UI state, auth)
+- Never store server state in component state
+- Use React Query mutations for POST/PUT/DELETE operations
+- Implement optimistic updates where appropriate
+
+### Data Fetching
+
+- Always use React Query hooks for API calls
+- Implement proper loading and error states
+- Use query keys for cache invalidation
+- Implement pagination for large datasets
+- Cache API responses appropriately
+
+### Form Handling
+
+- Use React Hook Form for all forms
+- Validate with Zod schema (shared with backend)
+- Show validation errors inline
+- Disable submit button during submission
+- Show success/error messages after submission
+
+### Routing
+
+- Use React Router or Next.js Router
+- Protect routes with authentication middleware
+- Use lazy loading for route components
+- Implement proper 404 handling
+
+### Performance
+
+- Use React.memo for expensive components
+- Implement code splitting for routes
+- Lazy load heavy components
+- Optimize images and assets
+- Use virtualization for long lists
+
+## Telegram Bot Rules
+
+### Handler Structure
+
+- One handler per command/message type
+- Handlers should be pure functions when possible
+- Store persistent state in database, not memory
+- Handle errors gracefully with user-friendly messages
+- Log all bot interactions to actions table
+
+### State Management
+
+- Use database for persistent state (sessions table)
+- Use context for temporary conversation state
+- Clear state after conversation completion
+- Handle expired/invalid sessions gracefully
+
+### Message Handling
+
+- Validate all user input (email, session_id, etc.)
+- Provide clear error messages
+- Use inline keyboards for user actions
+- Implement conversation flow with state machine
+- Handle deep links with session_id parameter
+
+## Database Rules
+
+### Schema Design
+
+- Use UUID for primary keys (not auto-increment integers)
+- Add `created_at` and `updated_at` timestamps to all tables
+- Use ENUM types for fixed sets of values (status, plan, action_type)
+- Use JSONB for flexible metadata storage
+- Add indexes on foreign keys and frequently queried columns
+- Use constraints (UNIQUE, NOT NULL, FOREIGN KEY) appropriately
+
+### Migrations
+
+- Never modify existing migrations - create new ones
+- Test migrations on staging before production
+- Include rollback scripts
+- Document breaking changes in migration comments
+- Use transactions for migration scripts
+
+### Queries
+
+- Use ORM query builder, avoid raw SQL when possible
+- Implement pagination for all list queries
+- Use select() to fetch only needed columns
+- Avoid N+1 query problems (use includes/joins)
+- Use database transactions for related operations
+
+## Security Rules
+
+### Input Validation
+
+- Validate and sanitize ALL user input
+- Use parameterized queries (ORM handles this)
+- Escape output to prevent XSS attacks
+- Validate file uploads (type, size, content)
+- Rate limit API endpoints
+
+### Authentication
+
+- Never store passwords in plain text
+- Use secure password hashing (bcrypt)
+- Implement proper session management
+- Use HTTPS in production
+- Set secure cookie flags (httpOnly, secure, sameSite)
+
+### API Security
+
+- Validate JWT tokens on every request
+- Implement CORS properly (whitelist origins)
+- Use helmet.js for Express security headers
+- Validate webhook signatures
+- Implement rate limiting per IP/user
+
+### Secrets Management
+
+- Never commit secrets to Git
+- Use environment variables for configuration
+- Use secrets manager in production (AWS Secrets Manager, etc.)
+- Rotate secrets regularly
+- Never log sensitive data (passwords, tokens, credit cards)
+
+## Logging Rules
+
+### What to Log
+
+- All webhook events (with full payload)
+- All payment transactions
+- All authentication attempts
+- All errors with full context
+- Important business events (access granted, email sent)
+
+### Log Format
+
+- Use structured logging (JSON format)
+- Include context: session_id, user_id, timestamp, action
+- Use appropriate log levels: error, warn, info, debug
+- Never log sensitive data (passwords, tokens, full credit card numbers)
+- Store logs in actions table for audit trail
+
+## Testing Rules
+
+### Unit Tests
+
+- Test services and utilities independently
+- Mock external dependencies (database, APIs)
+- Aim for >80% code coverage
+- Test edge cases and error scenarios
+- Use descriptive test names
+
+### Integration Tests
+
+- Test API endpoints with test database
+- Test full flows (session creation → bot → payment)
+- Clean up test data after tests
+- Use test fixtures for common data
+- Test error handling
+
+### E2E Tests
+
+- Test user flows end-to-end
+- Use test accounts and sandbox environments
+- Test admin panel workflows
+- Verify webhook integrations
+
+## Code Quality Rules
+
+### TypeScript
+
+- Use strict mode
+- Define interfaces/types for all data structures
+- Avoid `any` type - use `unknown` if type is truly unknown
+- Use enums for fixed sets of values
+- Export types/interfaces from separate files
+
+### Code Organization
+
+- Group related files in folders
+- Use barrel exports (index.ts) for public APIs
+- Keep files focused (max 300 lines)
+- Extract complex logic to separate functions
+- Use meaningful variable and function names
+
+### Comments & Documentation
+
+- Write self-documenting code (clear names)
+- Add JSDoc comments for public APIs
+- Document complex business logic
+- Keep comments up-to-date with code
+- Document API endpoints (Swagger/OpenAPI)
+
+## Integration Rules
+
+### Make Integration
+
+- Send webhook to Make after critical events
+- Include all relevant data in webhook payload
+- Implement retry logic for failed webhook calls
+- Log webhook attempts in actions table
+- Handle webhook failures gracefully
+
+### PayPal Integration
+
+- Always verify webhook signatures
+- Handle idempotency with txn_id
+- Extract session_id from custom parameter
+- Handle all payment statuses (completed, pending, refunded, failed)
+- Log all PayPal events
+
+### External APIs
+
+- Use HTTP client with timeout (5-10 seconds)
+- Implement retry logic with exponential backoff
+- Handle rate limiting gracefully
+- Cache responses when appropriate
+- Never expose API keys to frontend
+
+## Performance Rules
+
+### Backend Performance
+
+- Use database indexes for frequently queried columns
+- Implement caching for expensive queries (Redis optional)
+- Use pagination for large datasets
+- Optimize database queries (avoid N+1 problems)
+- Use connection pooling
+
+### Frontend Performance
+
+- Code split by route
+- Lazy load heavy components
+- Optimize bundle size
+- Use React.memo for expensive components
+- Implement virtualization for long lists
+
+### API Performance
+
+- Implement response compression
+- Use HTTP caching headers where appropriate
+- Optimize response payloads (only return needed fields)
+- Monitor response times
+- Set appropriate timeouts
+
+## Deployment Rules
+
+### Environment Configuration
+
+- Use .env files for local development
+- Never commit .env files to Git
+- Document all required environment variables
+- Use environment-specific configurations
+- Validate environment variables on startup
+
+### Docker
+
+- Use multi-stage builds for optimization
+- Set up health checks
+- Use .dockerignore to exclude unnecessary files
+- Keep images small (use alpine base images)
+- Use docker-compose for local development
+
+### CI/CD
+
+- Run tests before deployment
+- Build Docker images in CI
+- Deploy to staging first, then production
+- Use environment-specific configurations
+- Implement rollback strategy
+
+## Business Logic Rules
+
+### Email Priority
+
+- Final email = `email_user` (if exists) ELSE `email_paypal`
+- Always prioritize user-provided email over PayPal email
+- Store both emails separately for audit trail
+
+### Session Status Flow
+
+- `started` → `awaiting_payment` → `paid` → `completed`
+- Never skip statuses in the flow
+- Handle edge cases (refunded, failed)
+- Update status atomically (use transactions)
+
+### Date Calculations
+
+- End Date = Payment Date + 60 days (calculated in Make)
+- Use UTC for all timestamps
+- Calculate dates once and store in database
+- Handle timezone conversions properly
+
+### Idempotency
+
+- Use `txn_id` for PayPal webhook deduplication
+- Use `session_id` for session operations
+- Check for duplicates before processing
+- Log duplicate attempts to actions table
+
+## Error Recovery Rules
+
+### Retry Logic
+
+- Implement exponential backoff for retries
+- Maximum 3 retry attempts
+- Log all retry attempts
+- Fail gracefully after max retries
+
+### Data Consistency
+
+- Use database transactions for related operations
+- Implement idempotent operations
+- Handle partial failures gracefully
+- Maintain audit trail in actions table
+
+### Monitoring
+
+- Set up error tracking (Sentry)
+- Monitor critical endpoints
+- Set up alerts for failures
+- Track key metrics (conversion rate, error rate)

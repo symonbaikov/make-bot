@@ -1,0 +1,409 @@
+---
+alwaysApply: true
+---
+
+# Implementation Plan
+
+## Overview
+
+**Total Duration:** ~15 дней (3 недели)
+
+**Objective:** Создать систему для сбора и валидации email адресов пользователей до/после оплаты, связывания их с платежами/планами, синхронизации данных через Make и предоставления админ-панели для контроля, статистики и ручных операций.
+
+---
+
+## Phase 1: Project Setup & Database (День 1)
+
+### Step 1.1: Инициализация проекта
+
+- [ ] Создать структуру проекта (monorepo или отдельные репозитории)
+- [ ] Настроить package.json для backend и frontend
+- [ ] Настроить TypeScript конфигурацию (tsconfig.json)
+- [ ] Настроить ESLint и Prettier
+- [ ] Создать .env.example файлы
+- [ ] Инициализировать Git репозиторий
+
+### Step 1.2: Настройка базы данных PostgreSQL
+
+- [ ] Создать базу данных (локально или в облаке)
+- [ ] Настроить Prisma/TypeORM схему
+- [ ] Создать миграции для таблиц:
+  - `users` - информация о пользователях
+  - `sessions` (payments) - сессии платежей
+  - `actions` - журнал действий
+  - `web_users` - администраторы веб-панели
+- [ ] Настроить ENUM типы (plan, status, action_type, role)
+- [ ] Применить миграции
+- [ ] Создать seed данные для тестирования
+
+### Step 1.3: Настройка окружения разработки
+
+- [ ] Настроить Docker Compose для локальной БД (опционально)
+- [ ] Настроить скрипты запуска (dev, build, start)
+- [ ] Настроить переменные окружения
+
+---
+
+## Phase 2: Backend API Development (День 2-3)
+
+### Step 2.1: Базовая структура Backend API
+
+- [ ] Создать структуру папок (controllers, services, models, middleware, utils)
+- [ ] Настроить Express/Fastify сервер
+- [ ] Настроить подключение к БД через ORM
+- [ ] Настроить middleware (CORS, body-parser, error handling)
+- [ ] Настроить логирование (Winston/Pino)
+- [ ] Создать базовые утилиты (response helpers, error classes)
+
+### Step 2.2: Модели и сервисы данных
+
+- [ ] Реализовать User модель и сервис
+- [ ] Реализовать Session/Payment модель и сервис
+- [ ] Реализовать Action модель и сервис
+- [ ] Реализовать WebUser модель и сервис
+- [ ] Создать методы CRUD операций
+- [ ] Реализовать бизнес-логику (final email, end date calculation)
+
+### Step 2.3: Webhook endpoints
+
+- [ ] Создать `POST /api/webhook/bot` endpoint
+  - Валидация входных данных (Zod/Joi)
+  - Upsert логика для sessions
+  - Логирование в actions
+  - Интеграция с Make (HTTP запрос)
+- [ ] Создать `POST /api/webhook/paypal` endpoint
+  - Верификация подписи PayPal
+  - Обработка различных статусов платежа
+  - Обновление session по session_id из custom параметра
+  - Проверка на дубликаты по txn_id
+  - Логирование в actions
+  - Интеграция с Make
+
+### Step 2.4: Admin API endpoints
+
+- [ ] Создать `POST /api/admin/auth/login` endpoint
+  - Валидация email/password
+  - Проверка через bcrypt
+  - Генерация JWT токена
+- [ ] Создать middleware для проверки JWT
+- [ ] Создать `GET /api/admin/payments` endpoint
+  - Фильтрация (status, plan, date range)
+  - Поиск (email, session_id, txn_id)
+  - Пагинация
+  - Сортировка
+- [ ] Создать `GET /api/admin/payments/:id` endpoint
+- [ ] Создать `POST /api/admin/payments/:id/resend` endpoint
+- [ ] Создать `PUT /api/admin/payments/:id/email` endpoint
+- [ ] Создать `GET /api/admin/stats` endpoint
+  - Conversion funnel
+  - Revenue by plan
+  - Trends over time
+- [ ] Создать `GET /api/admin/actions` endpoint (activity log)
+- [ ] Создать `POST /api/admin/sessions` endpoint (manual session creation)
+- [ ] Создать `GET /api/admin/export` endpoint (CSV/Excel export)
+
+### Step 2.5: Интеграция с Make
+
+- [ ] Создать сервис для отправки webhook в Make
+- [ ] Реализовать retry логику для failed requests
+- [ ] Добавить обработку ошибок
+
+---
+
+## Phase 3: Telegram Bot Development (День 3-4)
+
+### Step 3.1: Базовая настройка бота
+
+- [ ] Создать Telegram бота через BotFather
+- [ ] Настроить Telegraf/node-telegram-bot-api
+- [ ] Настроить webhook для бота (или polling для разработки)
+- [ ] Создать структуру папок (handlers, middleware, utils)
+- [ ] Настроить подключение к Backend API
+
+### Step 3.2: Обработчики команд и сообщений
+
+- [ ] Реализовать `/start` handler с поддержкой session_id
+  - Проверка валидности session_id через API
+  - Приветственное сообщение
+  - Переход к запросу email
+- [ ] Реализовать обработку текстовых сообщений (email input)
+  - Валидация email формата (validator.js)
+  - Сохранение email в состояние пользователя
+  - Запрос подтверждения или переход к OTP
+- [ ] Реализовать OTP функционал (опционально)
+  - Генерация OTP кода
+  - Отправка email с OTP через nodemailer
+  - Проверка введенного кода
+- [ ] Реализовать отправку данных в Backend API
+  - POST запрос с session_id, email, tg_user_id
+  - Обработка ответа от API
+  - Генерация PayPal ссылки с custom=session_id
+  - Отправка ссылки пользователю
+
+### Step 3.3: Обработка состояний и сценариев
+
+- [ ] Реализовать state management (контекст или база данных)
+- [ ] Обработка случая, когда платеж уже совершен
+- [ ] Обработка невалидного/истекшего session_id
+- [ ] Обработка ошибок и fallback сценарии
+- [ ] Добавить кнопки и inline клавиатуры
+
+### Step 3.4: Интеграция с Backend API
+
+- [ ] Создать HTTP клиент для взаимодействия с API
+- [ ] Реализовать проверку статуса платежа
+- [ ] Реализовать отправку webhook данных
+
+---
+
+## Phase 4: Frontend Development (День 4-6)
+
+### Step 4.1: Инициализация Frontend проекта
+
+- [ ] Создать React/Next.js проект
+- [ ] Настроить структуру папок (components, pages, hooks, services, utils)
+- [ ] Настроить UI библиотеку (MUI/Ant Design/Tailwind)
+- [ ] Настроить React Query для data fetching
+- [ ] Настроить React Router (если чистый React)
+- [ ] Настроить Axios/Fetch для API запросов
+
+### Step 4.2: Система аутентификации
+
+- [ ] Создать страницу логина (`/login`)
+  - Форма с email и password
+  - Валидация через React Hook Form + Zod
+  - Отправка запроса на `/api/admin/auth/login`
+  - Сохранение JWT токена
+- [ ] Создать Auth Context/Provider
+- [ ] Создать Protected Route компонент
+- [ ] Реализовать автоматический logout при истечении токена
+- [ ] Создать страницу выхода
+
+### Step 4.3: Dashboard страница
+
+- [ ] Создать layout с навигацией
+- [ ] Реализовать Dashboard компонент (`/dashboard`)
+  - Карточки с ключевыми метриками
+  - Conversion funnel график (Recharts)
+  - Revenue by plan график
+  - Trends график (временной ряд)
+- [ ] Настроить React Query для загрузки статистики
+- [ ] Добавить фильтры по датам
+
+### Step 4.4: Список платежей/сессий
+
+- [ ] Создать страницу списка (`/payments`)
+  - Таблица с данными (MUI Table или Ant Design Table)
+  - Колонки: ID, Session ID, Email, Plan, Amount, Status, Date
+  - Пагинация
+  - Сортировка по колонкам
+- [ ] Реализовать фильтры
+  - По статусу (dropdown)
+  - По плану (dropdown)
+  - По дате (date picker)
+  - По email (search input)
+- [ ] Реализовать поиск (session_id, txn_id, email)
+- [ ] Добавить кнопку экспорта (CSV/Excel)
+
+### Step 4.5: Детали платежа/сессии
+
+- [ ] Создать страницу деталей (`/payments/:id`)
+  - Отображение всех полей записи
+  - Показ обоих email (email_user и email_paypal) с источниками
+  - Отображение meta данных (JSON viewer)
+  - История действий (actions log)
+- [ ] Реализовать действия:
+  - Кнопка "Resend Email" (модальное окно подтверждения)
+  - Кнопка "Grant Access" (модальное окно подтверждения)
+  - Редактирование email (inline edit или модальное окно)
+- [ ] Добавить кнопку "Back to list"
+
+### Step 4.6: Activity Log страница
+
+- [ ] Создать страницу логов (`/actions`)
+  - Таблица с действиями
+  - Фильтры по типу действия
+  - Фильтры по дате
+  - Поиск по ref (session_id, txn_id, user_id)
+  - Отображение payload (expandable row)
+
+### Step 4.7: Ручное создание сессии
+
+- [ ] Создать страницу создания сессии (`/sessions/create`)
+  - Форма с полями: plan, amount, currency
+  - Генерация session_id
+  - Создание записи через API
+  - Отображение созданной ссылки на бота
+
+### Step 4.8: Общие компоненты и утилиты
+
+- [ ] Создать компоненты: Loading, Error, Empty State
+- [ ] Создать утилиты для форматирования дат, валют
+- [ ] Настроить обработку ошибок (error boundaries)
+- [ ] Добавить toast уведомления (react-toastify или MUI Snackbar)
+
+---
+
+## Phase 5: Make Automation Scenarios (День 6-7)
+
+### Step 5.1: Webhook от бота
+
+- [ ] Создать сценарий в Make для приема webhook от бота
+- [ ] Настроить HTTP модуль для приема данных
+- [ ] Реализовать логику upsert в PostgreSQL через Make модуль
+- [ ] Сохранение email_user
+- [ ] Логирование события в actions таблицу
+- [ ] Триггер на provisioning (если платеж уже есть)
+
+### Step 5.2: Webhook от PayPal
+
+- [ ] Создать сценарий в Make для приема webhook от PayPal
+- [ ] Настроить верификацию подписи PayPal
+- [ ] Извлечение session_id из custom параметра
+- [ ] Поиск записи по session_id
+- [ ] Обновление статуса, txn_id, email_paypal
+- [ ] Проверка на дубликаты по txn_id
+- [ ] Логирование события
+
+### Step 5.3: Access Provisioning модуль
+
+- [ ] Создать общий модуль для provisioning
+- [ ] Определение final email (email_user OR email_paypal)
+- [ ] Расчет end_date (payment_date + 60 days)
+- [ ] Отправка email с доступом (через email модуль Make)
+- [ ] Обновление статуса на "completed"
+- [ ] Логирование события "access_granted"
+- [ ] Синхронизация с Google Sheets (если требуется)
+
+### Step 5.4: Ночные проверки и алерты
+
+- [ ] Создать сценарий для ночных проверок (cron)
+- [ ] Поиск записей со статусом "paid_pending_email" старше N часов
+- [ ] Отправка Telegram уведомления администратору
+- [ ] Логирование в actions
+
+---
+
+## Phase 6: Testing & Integration (День 7-8)
+
+### Step 6.1: Unit тесты
+
+- [ ] Написать тесты для Backend сервисов
+- [ ] Написать тесты для утилит
+- [ ] Написать тесты для валидации
+
+### Step 6.2: Integration тесты
+
+- [ ] Протестировать полный flow: создание сессии → бот → email → платеж
+- [ ] Протестировать webhook endpoints
+- [ ] Протестировать Admin API endpoints
+- [ ] Протестировать обработку ошибок
+
+### Step 6.3: E2E тестирование
+
+- [ ] Протестировать пользовательский сценарий через Telegram бота
+- [ ] Протестировать Admin панель (логин, просмотр, действия)
+- [ ] Протестировать экспорт данных
+
+### Step 6.4: Тестирование интеграций
+
+- [ ] Протестировать интеграцию с Make (webhooks)
+- [ ] Протестировать PayPal webhook (sandbox)
+- [ ] Протестировать отправку email
+
+---
+
+## Phase 7: Security & Optimization (День 8)
+
+### Step 7.1: Безопасность
+
+- [ ] Настроить HTTPS для всех endpoints
+- [ ] Реализовать rate limiting для API
+- [ ] Настроить CORS правильно
+- [ ] Проверить SQL injection защиту (ORM должен защищать)
+- [ ] Настроить helmet.js для Express
+- [ ] Реализовать валидацию всех входных данных
+- [ ] Настроить secure хранение секретов (environment variables)
+
+### Step 7.2: Оптимизация
+
+- [ ] Оптимизировать запросы к БД (индексы, запросы)
+- [ ] Настроить кэширование для статистики (Redis опционально)
+- [ ] Оптимизировать bundle size фронтенда
+- [ ] Настроить compression для API ответов
+
+---
+
+## Phase 8: Deployment & Documentation (День 9-10)
+
+### Step 8.1: Подготовка к деплою
+
+- [ ] Создать Dockerfile для Backend
+- [ ] Создать Dockerfile для Frontend (если нужен)
+- [ ] Создать docker-compose.yml для локальной разработки
+- [ ] Настроить production environment variables
+- [ ] Настроить production базу данных
+
+### Step 8.2: CI/CD настройка
+
+- [ ] Настроить GitHub Actions/GitLab CI
+- [ ] Настроить автоматические тесты в CI
+- [ ] Настроить автоматический деплой на staging
+- [ ] Настроить деплой на production (manual или автоматический)
+
+### Step 8.3: Деплой компонентов
+
+- [ ] Задеплоить Backend API (Render/Railway/Fly.io)
+- [ ] Задеплоить Telegram Bot (Render/Fly.io)
+- [ ] Задеплоить Frontend (Vercel/Netlify)
+- [ ] Настроить домены и SSL сертификаты
+- [ ] Настроить webhook URLs в Telegram и PayPal
+
+### Step 8.4: Настройка Make сценариев
+
+- [ ] Настроить webhook URLs в Make сценариях
+- [ ] Протестировать все сценарии в Make
+- [ ] Настроить алерты в Make
+
+### Step 8.5: Документация
+
+- [ ] Написать README с инструкциями по установке
+- [ ] Документировать API endpoints (Swagger/OpenAPI опционально)
+- [ ] Создать документацию для админов (как использовать панель)
+- [ ] Документировать переменные окружения
+- [ ] Создать troubleshooting guide
+
+### Step 8.6: Мониторинг и алерты
+
+- [ ] Настроить Sentry для error tracking
+- [ ] Настроить логирование в production
+- [ ] Настроить мониторинг uptime (UptimeRobot или аналог)
+- [ ] Настроить алерты для критических ошибок
+
+---
+
+## Key Business Rules
+
+- **Final Email:** `email_user` (if exists) ELSE `email_paypal`
+- **End Date:** Payment Date + 60 days (calculated in Make)
+- **Session Status Flow:** `started` → `awaiting_payment` → `paid` → `completed`
+- **Idempotency:** Use `txn_id` for PayPal webhook deduplication
+- **Session Linking:** Use `session_id` from PayPal `custom` parameter
+
+## Priority Order
+
+1. **Phase 1** - Foundation (Database, project setup)
+2. **Phase 2** - Backend API (Core functionality)
+3. **Phase 3** - Telegram Bot (User interaction)
+4. **Phase 4** - Frontend (Admin panel)
+5. **Phase 5** - Make Integration (Automation)
+6. **Phase 6** - Testing (Quality assurance)
+7. **Phase 7** - Security & Optimization (Production readiness)
+8. **Phase 8** - Deployment (Go live)
+
+## Notes
+
+- Каждая фаза должна быть завершена перед переходом к следующей
+- Тестирование должно проводиться на каждом этапе
+- Документировать все важные решения и изменения
+- Поддерживать связь с заказчиком для уточнения требований

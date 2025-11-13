@@ -1,0 +1,314 @@
+---
+alwaysApply: true
+---
+
+# Architecture Rules
+
+## Technology Stack
+
+### Backend
+
+- **Runtime:** Node.js 18+ (LTS)
+- **Framework:** Express.js или Fastify
+- **Database:** PostgreSQL 14+
+- **ORM:** Prisma или TypeORM
+- **Authentication:** JWT (jsonwebtoken) + bcrypt для паролей
+- **Validation:** Zod или Joi
+- **HTTP Client:** Axios или node-fetch
+- **Logging:** Winston или Pino
+- **Environment:** dotenv
+
+### Telegram Bot
+
+- **Library:** Telegraf или node-telegram-bot-api
+- **Webhook:** Express middleware для обработки webhook от Telegram
+- **Email Validation:** validator.js + nodemailer для OTP
+
+### Frontend
+
+- **Framework:** React 18+ или Next.js 14+ (SSR/SSG)
+- **State Management:** React Query (TanStack Query) или Zustand
+- **UI Library:** Material-UI (MUI) или Ant Design или Tailwind CSS + Headless UI
+- **Forms:** React Hook Form + Zod
+- **HTTP Client:** Axios или Fetch API
+- **Charts:** Recharts или Chart.js
+- **Routing:** React Router (если чистый React) или Next.js Router
+- **Authentication:** JWT в localStorage/sessionStorage или httpOnly cookies
+
+### Payment Integration
+
+- **PayPal SDK:** @paypal/checkout-server-sdk или paypal-rest-sdk
+- **Webhook Verification:** PayPal IPN/Webhook signature verification
+
+## Project Structure
+
+### Monorepo Structure (Recommended)
+
+```
+make-bot/
+├── backend/          # Node.js API server
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── services/
+│   │   ├── models/
+│   │   ├── middleware/
+│   │   ├── utils/
+│   │   ├── routes/
+│   │   └── index.ts
+│   ├── prisma/       # Prisma schema and migrations
+│   └── package.json
+├── bot/              # Telegram bot
+│   ├── src/
+│   │   ├── handlers/
+│   │   ├── middleware/
+│   │   ├── utils/
+│   │   └── index.ts
+│   └── package.json
+├── frontend/         # React/Next.js admin panel
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── hooks/
+│   │   ├── services/
+│   │   ├── utils/
+│   │   └── App.tsx
+│   └── package.json
+└── docs/            # Documentation
+```
+
+## Backend Architecture
+
+### Folder Structure
+
+- `controllers/` - Request handlers, validate input, call services
+- `services/` - Business logic, database operations
+- `models/` - Database models/schemas (if using TypeORM)
+- `middleware/` - Express middleware (auth, error handling, logging)
+- `utils/` - Helper functions, constants
+- `routes/` - Route definitions
+
+### API Endpoints Structure
+
+- `/api/webhook/bot` - Webhook from Telegram bot
+- `/api/webhook/paypal` - Webhook from PayPal
+- `/api/admin/auth/*` - Admin authentication endpoints
+- `/api/admin/payments/*` - Payment/session management
+- `/api/admin/stats` - Statistics and analytics
+- `/api/admin/actions` - Activity log
+- `/api/admin/export` - Data export
+
+### Database Schema
+
+- `users` - User information (email, telegram_id)
+- `sessions` (payments) - Payment sessions with status tracking
+- `actions` - Activity log for all events
+- `web_users` - Admin users for web panel
+
+### Key Business Rules
+
+- **Final Email:** `email_user` (if exists) ELSE `email_paypal`
+- **End Date:** Payment Date + 60 days (calculated in Make)
+- **Session Status Flow:** `started` → `awaiting_payment` → `paid` → `completed`
+- **Idempotency:** Use `txn_id` for PayPal webhook deduplication
+- **Session Linking:** Use `session_id` from PayPal `custom` parameter
+
+## Frontend Architecture
+
+### Folder Structure
+
+- `components/` - Reusable UI components
+- `pages/` - Page components (routes)
+- `hooks/` - Custom React hooks
+- `services/` - API client functions
+- `utils/` - Helper functions, formatters
+- `contexts/` - React contexts (Auth, Theme, etc.)
+
+### Key Pages
+
+- `/login` - Admin authentication
+- `/dashboard` - Statistics and metrics
+- `/payments` - Payment/session list with filters
+- `/payments/:id` - Payment details and actions
+- `/actions` - Activity log
+- `/sessions/create` - Manual session creation
+
+### State Management
+
+- Use React Query for server state (API data)
+- Use Zustand or Context API for client state (UI state, auth)
+- Keep components as pure as possible
+
+## Telegram Bot Architecture
+
+### Folder Structure
+
+- `handlers/` - Command and message handlers
+- `middleware/` - Bot middleware (session, logging)
+- `utils/` - Helper functions (email validation, API client)
+
+### Key Handlers
+
+- `/start` - Entry point with session_id support
+- Email input handler - Validate and save email
+- OTP handler (optional) - Email verification
+- Payment status check - Verify if payment completed
+
+### State Management
+
+- Use database for persistent state (sessions table)
+- Store temporary state in context or database
+- Handle expired/invalid sessions gracefully
+
+## Code Conventions
+
+### Naming
+
+- **Files:** kebab-case (e.g., `user-service.ts`, `payment-controller.ts`)
+- **Classes:** PascalCase (e.g., `UserService`, `PaymentController`)
+- **Functions/Variables:** camelCase (e.g., `getUserById`, `sessionId`)
+- **Constants:** UPPER_SNAKE_CASE (e.g., `MAX_RETRY_COUNT`)
+- **Database Tables:** snake_case (e.g., `web_users`, `session_id`)
+
+### TypeScript
+
+- Always use TypeScript with strict mode
+- Define interfaces/types for all data structures
+- Use enums for fixed sets of values (status, plan, action_type)
+- Avoid `any` type, use `unknown` if type is truly unknown
+
+### Error Handling
+
+- Use custom error classes extending Error
+- Log all errors with context (Winston/Pino)
+- Return consistent error response format
+- Handle async errors with try-catch or .catch()
+
+### Validation
+
+- Validate all input data (Zod/Joi)
+- Validate at controller level before processing
+- Return clear validation error messages
+- Sanitize user input to prevent injection
+
+### Database Operations
+
+- Use transactions for multi-step operations
+- Always handle database errors
+- Use prepared statements (ORM handles this)
+- Add indexes for frequently queried columns
+- Use connection pooling
+
+### API Design
+
+- RESTful conventions for admin endpoints
+- Webhook endpoints accept POST only
+- Return consistent response format: `{ success, data, error }`
+- Use HTTP status codes correctly (200, 201, 400, 401, 404, 500)
+- Implement pagination for list endpoints
+- Use query parameters for filtering/searching
+
+### Security
+
+- Never expose sensitive data in logs
+- Hash passwords with bcrypt (salt rounds: 10+)
+- Validate JWT tokens on every protected route
+- Use HTTPS in production
+- Implement rate limiting
+- Validate PayPal webhook signatures
+- Sanitize user input
+
+### Logging
+
+- Log all important events (webhooks, payments, errors)
+- Include context: session_id, user_id, timestamp
+- Use appropriate log levels (error, warn, info, debug)
+- Store logs in actions table for audit trail
+
+## Integration Patterns
+
+### Make Integration
+
+- Send webhook to Make after critical events
+- Include all relevant data in webhook payload
+- Implement retry logic for failed webhook calls
+- Log webhook attempts in actions table
+
+### PayPal Integration
+
+- Verify webhook signatures before processing
+- Handle idempotency with txn_id
+- Extract session_id from custom parameter
+- Handle all payment statuses (completed, pending, refunded, failed)
+
+### Telegram Bot Integration
+
+- Use webhook mode in production, polling in development
+- Handle deep links with session_id parameter
+- Validate session_id exists and is valid before processing
+- Provide fallback messages for errors
+
+## Testing
+
+### Unit Tests
+
+- Test services and utilities independently
+- Mock external dependencies (database, APIs)
+- Aim for high code coverage (>80%)
+
+### Integration Tests
+
+- Test API endpoints with test database
+- Test full flows (session creation → bot → payment)
+- Clean up test data after tests
+
+### E2E Tests
+
+- Test user flows end-to-end
+- Test admin panel workflows
+- Use test accounts and sandbox environments
+
+## Deployment
+
+### Environment Variables
+
+- Use `.env` files for local development
+- Never commit `.env` files to Git
+- Document all required environment variables
+- Use secrets manager in production
+
+### Docker
+
+- Create Dockerfile for each service (backend, bot)
+- Use multi-stage builds for optimization
+- Use docker-compose for local development
+- Set up health checks
+
+### CI/CD
+
+- Run tests before deployment
+- Build Docker images in CI
+- Deploy to staging first, then production
+- Use environment-specific configurations
+
+## Performance
+
+### Database
+
+- Add indexes on frequently queried columns
+- Use pagination for large datasets
+- Optimize queries (avoid N+1 problems)
+- Use connection pooling
+
+### API
+
+- Implement caching for statistics (Redis optional)
+- Use compression middleware
+- Optimize response payloads
+- Monitor response times
+
+### Frontend
+
+- Code splitting for routes
+- Lazy load heavy components
+- Optimize bundle size
+- Use React.memo for expensive components

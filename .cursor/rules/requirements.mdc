@@ -1,0 +1,502 @@
+---
+alwaysApply: true
+---
+
+# Project Requirements
+
+## 1. Functional Requirements
+
+### 1.1 Email Collection & Validation
+
+#### FR-1.1.1: Email Collection Before Payment (Priority)
+
+- **REQ-001:** System MUST collect user email address via Telegram bot before payment
+- **REQ-002:** System MUST support deep-link with `session_id` parameter: `https://t.me/<bot>?start=<session_id>`
+- **REQ-003:** System MUST validate email format using validator.js
+- **REQ-004:** System MUST optionally support OTP email verification via nodemailer
+- **REQ-005:** System MUST store collected email as `email_user` in sessions table
+- **REQ-006:** System MUST send webhook to Make with `{session_id, email, tg_user_id}` after email collection
+
+#### FR-1.1.2: Email Collection After Payment (Fallback)
+
+- **REQ-007:** System MUST support email collection after payment if not collected before
+- **REQ-008:** System MUST mark session as `paid_pending_email` when payment received without email
+- **REQ-009:** System MUST provide web form alternative if Telegram bot unavailable
+- **REQ-010:** System MUST complete access provisioning once email collected after payment
+
+#### FR-1.1.3: Email Priority Logic
+
+- **REQ-011:** System MUST prioritize `email_user` over `email_paypal` for final email
+- **REQ-012:** System MUST use `email_paypal` as fallback if `email_user` not available
+- **REQ-013:** System MUST store both emails separately for audit trail
+
+### 1.2 Payment Processing
+
+#### FR-1.2.1: PayPal Integration
+
+- **REQ-014:** System MUST integrate with PayPal using `custom=session_id` parameter
+- **REQ-015:** System MUST verify PayPal webhook signatures before processing
+- **REQ-016:** System MUST handle PayPal webhook/IPN events
+- **REQ-017:** System MUST extract `session_id` from PayPal `custom` parameter
+- **REQ-018:** System MUST store PayPal transaction ID (`txn_id`) in sessions table
+- **REQ-019:** System MUST store PayPal email (`email_paypal`) in sessions table
+- **REQ-020:** System MUST implement idempotency check using `txn_id` to prevent duplicates
+
+#### FR-1.2.2: Payment Status Management
+
+- **REQ-021:** System MUST track payment status: `started` → `awaiting_payment` → `paid` → `completed`
+- **REQ-022:** System MUST handle payment statuses: `paid`, `refunded`, `failed`, `pending`
+- **REQ-023:** System MUST update session status atomically using database transactions
+- **REQ-024:** System MUST never skip statuses in the flow
+
+### 1.3 Access Provisioning
+
+#### FR-1.3.1: Access Granting
+
+- **REQ-025:** System MUST automatically grant access after payment completion
+- **REQ-026:** System MUST calculate end date as Payment Date + 60 days (UTC)
+- **REQ-027:** System MUST send access email to final email address
+- **REQ-028:** System MUST update session status to `completed` after access granted
+- **REQ-029:** System MUST log `access_granted` event to actions table
+- **REQ-030:** System MUST trigger provisioning when both payment and email are available
+
+### 1.4 Telegram Bot
+
+#### FR-1.4.1: Bot Functionality
+
+- **REQ-031:** Bot MUST handle `/start` command with optional `session_id` parameter
+- **REQ-032:** Bot MUST verify `session_id` validity through Backend API
+- **REQ-033:** Bot MUST request email from user if not provided
+- **REQ-034:** Bot MUST validate email format before accepting
+- **REQ-035:** Bot MUST send collected data to Backend API via webhook
+- **REQ-036:** Bot MUST return PayPal payment link with `custom=session_id` parameter
+- **REQ-037:** Bot MUST handle case when payment already completed
+- **REQ-038:** Bot MUST provide clear error messages for invalid/expired sessions
+- **REQ-039:** Bot MUST use inline keyboards for user actions
+
+#### FR-1.4.2: Bot State Management
+
+- **REQ-040:** Bot MUST store persistent state in database (sessions table)
+- **REQ-041:** Bot MUST handle conversation flow with state machine
+- **REQ-042:** Bot MUST clear state after conversation completion
+- **REQ-043:** Bot MUST handle expired/invalid sessions gracefully
+
+#### FR-1.4.3: Bot Authentication & Access Control
+
+- **REQ-043A:** Bot MUST require login and password authentication for access
+- **REQ-043B:** Bot MUST authenticate users before processing any commands (except `/start` with valid session_id)
+- **REQ-043C:** Bot MUST use same authentication mechanism as web application (JWT or session-based)
+- **REQ-043D:** Bot MUST protect admin commands with role-based access control
+- **REQ-043E:** Bot MUST verify user credentials against web_users table
+
+### 1.5 Admin Panel (Web Application)
+
+#### FR-1.5.1: Authentication
+
+- **REQ-044:** Web application MUST require login and password authentication for access
+- **REQ-045:** System MUST provide admin login with email and password
+- **REQ-046:** System MUST use JWT tokens for admin authentication
+- **REQ-047:** System MUST hash passwords with bcrypt (minimum 10 salt rounds)
+- **REQ-048:** System MUST implement token refresh mechanism
+- **REQ-049:** System MUST protect all admin routes with authentication middleware
+- **REQ-050:** System MUST implement automatic logout on token expiration
+- **REQ-051:** Web application MUST redirect unauthenticated users to login page
+
+#### FR-1.5.2: Dashboard
+
+- **REQ-052:** System MUST display conversion funnel (start → email → payment)
+- **REQ-053:** System MUST display revenue by plan (basic/standard/premium)
+- **REQ-054:** System MUST display trends and analytics over time
+- **REQ-055:** System MUST provide date range filters for statistics
+- **REQ-056:** System MUST show key metrics in dashboard cards
+
+#### FR-1.5.3: Payment/Session Management
+
+- **REQ-057:** System MUST display list of all payments/sessions
+- **REQ-058:** System MUST support filtering by: status, plan, date range, email source
+- **REQ-059:** System MUST support search by: email, session_id, txn_id
+- **REQ-060:** System MUST implement pagination for payment list
+- **REQ-061:** System MUST support sorting by columns
+- **REQ-062:** System MUST display both `email_user` and `email_paypal` with sources
+- **REQ-063:** System MUST allow editing email addresses
+- **REQ-064:** System MUST provide "Resend Email" action
+- **REQ-065:** System MUST provide "Grant Access" action
+- **REQ-066:** System MUST display full payment details including metadata (JSON viewer)
+- **REQ-067:** System MUST show action history (actions log) for each payment
+
+#### FR-1.5.4: Activity Log
+
+- **REQ-068:** System MUST display complete activity log (actions table)
+- **REQ-069:** System MUST support filtering by action type
+- **REQ-070:** System MUST support filtering by date range
+- **REQ-071:** System MUST support search by ref (session_id, txn_id, user_id)
+- **REQ-072:** System MUST display payload in expandable rows
+
+#### FR-1.5.5: Manual Operations
+
+- **REQ-073:** System MUST allow manual creation of test/offline sessions
+- **REQ-074:** System MUST generate `session_id` for manual sessions
+- **REQ-075:** System MUST display bot deep-link after session creation
+- **REQ-076:** System MUST support CSV/Excel export of payment data
+
+### 1.6 Make Integration
+
+#### FR-1.6.1: Webhook Handling
+
+- **REQ-075:** System MUST send webhook to Make after bot email collection
+- **REQ-076:** System MUST send webhook to Make after PayPal payment
+- **REQ-077:** System MUST include all relevant data in webhook payload
+- **REQ-078:** System MUST implement retry logic for failed webhook calls
+- **REQ-079:** System MUST log webhook attempts in actions table
+
+#### FR-1.6.2: Automation Scenarios
+
+- **REQ-080:** Make MUST handle bot webhook and upsert session record
+- **REQ-081:** Make MUST handle PayPal webhook and update session status
+- **REQ-082:** Make MUST implement access provisioning module
+- **REQ-083:** Make MUST run nightly checks for pending records
+- **REQ-084:** Make MUST send Telegram alerts for pending records
+
+### 1.7 Google Sheets Integration (Optional)
+
+#### FR-1.7.1: Data Synchronization
+
+- **REQ-085:** System MAY synchronize data to Google Sheets
+- **REQ-086:** System MAY sync: Name, Email (final), Plan, Payment Date, End Date, Transaction ID, Payer ID, Tariff Code
+- **REQ-087:** System MUST check for duplicates by `session_id`/`txn_id` before insertion
+- **REQ-088:** System MUST store email source separately (user/paypal)
+
+## 2. Non-Functional Requirements
+
+### 2.1 Performance Requirements
+
+#### NFR-2.1.1: Response Time
+
+- **REQ-089:** API endpoints MUST respond within 200ms for 95% of requests
+- **REQ-090:** Database queries MUST complete within 100ms for simple queries
+- **REQ-091:** Frontend pages MUST load within 2 seconds
+- **REQ-092:** Telegram bot MUST respond within 1 second
+
+#### NFR-2.1.2: Throughput
+
+- **REQ-093:** System MUST handle at least 100 concurrent users
+- **REQ-094:** System MUST process at least 1000 webhook events per hour
+- **REQ-095:** System MUST support pagination for lists with 10,000+ records
+
+#### NFR-2.1.3: Scalability
+
+- **REQ-096:** System MUST scale horizontally for backend services
+- **REQ-097:** System MUST use database connection pooling
+- **REQ-098:** System MUST implement caching for statistics (Redis optional)
+- **REQ-099:** System MUST optimize database queries (avoid N+1 problems)
+
+### 2.2 Reliability Requirements
+
+#### NFR-2.2.1: Availability
+
+- **REQ-100:** System MUST maintain 99.5% uptime
+- **REQ-101:** System MUST implement health checks for all services
+- **REQ-102:** System MUST handle graceful degradation on service failures
+
+#### NFR-2.2.2: Error Handling
+
+- **REQ-103:** System MUST handle all errors gracefully
+- **REQ-104:** System MUST never expose internal error details to clients
+- **REQ-105:** System MUST log all errors with full context
+- **REQ-106:** System MUST implement retry logic for external API calls
+
+#### NFR-2.2.3: Data Integrity
+
+- **REQ-107:** System MUST use database transactions for multi-step operations
+- **REQ-108:** System MUST implement idempotent operations
+- **REQ-109:** System MUST prevent duplicate records (txn_id, session_id)
+- **REQ-110:** System MUST maintain audit trail in actions table
+
+### 2.3 Security Requirements
+
+#### NFR-2.3.1: Authentication & Authorization
+
+- **REQ-111:** System MUST use HTTPS for all communications
+- **REQ-112:** System MUST validate JWT tokens on every protected route
+- **REQ-113:** System MUST implement role-based access control (RBAC)
+- **REQ-114:** System MUST never store passwords in plain text
+- **REQ-115:** System MUST use secure password hashing (bcrypt, 10+ salt rounds)
+
+#### NFR-2.3.2: Data Protection
+
+- **REQ-116:** System MUST validate and sanitize ALL user input
+- **REQ-117:** System MUST use parameterized queries (ORM handles this)
+- **REQ-118:** System MUST escape output to prevent XSS attacks
+- **REQ-119:** System MUST never log sensitive data (passwords, tokens, credit cards)
+- **REQ-120:** System MUST store secrets in environment variables, never in code
+
+#### NFR-2.3.3: Webhook Security
+
+- **REQ-121:** System MUST verify PayPal webhook signatures
+- **REQ-122:** System MUST verify Telegram webhook authenticity
+- **REQ-123:** System MUST implement rate limiting for API endpoints
+- **REQ-124:** System MUST implement CORS properly (whitelist origins)
+
+### 2.4 Usability Requirements
+
+#### NFR-2.4.1: User Interface
+
+- **REQ-125:** Admin panel MUST be intuitive and easy to navigate
+- **REQ-126:** System MUST provide clear error messages to users
+- **REQ-127:** System MUST show loading states during async operations
+- **REQ-128:** System MUST provide toast notifications for actions
+- **REQ-129:** System MUST be responsive (mobile-friendly)
+
+#### NFR-2.4.2: Telegram Bot UX
+
+- **REQ-130:** Bot MUST provide clear instructions to users
+- **REQ-131:** Bot MUST minimize steps in conversation flow
+- **REQ-132:** Bot MUST explain benefits of providing email
+- **REQ-133:** Bot MUST handle errors with user-friendly messages
+
+### 2.5 Maintainability Requirements
+
+#### NFR-2.5.1: Code Quality
+
+- **REQ-134:** Code MUST follow TypeScript strict mode
+- **REQ-135:** Code MUST have >80% test coverage
+- **REQ-136:** Code MUST follow consistent naming conventions
+- **REQ-137:** Code MUST be well-documented (JSDoc for public APIs)
+
+#### NFR-2.5.2: Monitoring & Logging
+
+- **REQ-138:** System MUST log all important events (webhooks, payments, errors)
+- **REQ-139:** System MUST use structured logging (JSON format)
+- **REQ-140:** System MUST include context in logs (session_id, user_id, timestamp)
+- **REQ-141:** System MUST integrate error tracking (Sentry)
+- **REQ-142:** System MUST monitor uptime and set up alerts
+
+## 3. Business Requirements
+
+### 3.1 Business Rules
+
+#### BR-3.1.1: Email Priority
+
+- **REQ-143:** Final email MUST be `email_user` if exists, ELSE `email_paypal`
+- **REQ-144:** System MUST prioritize user-provided email over PayPal email
+- **REQ-145:** System MUST store both emails for audit trail
+
+#### BR-3.1.2: Date Calculations
+
+- **REQ-146:** End Date MUST be calculated as Payment Date + 60 days (UTC)
+- **REQ-147:** Date calculation MUST happen once in Make and stored in database
+- **REQ-148:** System MUST use UTC for all timestamps
+
+#### BR-3.1.3: Status Flow
+
+- **REQ-149:** Session status MUST follow: `started` → `awaiting_payment` → `paid` → `completed`
+- **REQ-150:** System MUST handle edge cases: `refunded`, `failed`
+- **REQ-151:** System MUST never skip statuses in the flow
+
+#### BR-3.1.4: Idempotency
+
+- **REQ-152:** System MUST use `txn_id` for PayPal webhook deduplication
+- **REQ-153:** System MUST use `session_id` for session operations
+- **REQ-154:** System MUST check for duplicates before processing
+- **REQ-155:** System MUST log duplicate attempts to actions table
+
+### 3.2 Data Requirements
+
+#### BR-3.2.1: Database Schema
+
+- **REQ-156:** System MUST use UUID for primary keys (not auto-increment)
+- **REQ-157:** System MUST add `created_at` and `updated_at` to all tables
+- **REQ-158:** System MUST use ENUM types for fixed sets (status, plan, action_type)
+- **REQ-159:** System MUST use JSONB for flexible metadata storage
+- **REQ-160:** System MUST add indexes on foreign keys and frequently queried columns
+
+#### BR-3.2.2: Required Tables
+
+- **REQ-161:** System MUST have `users` table (id, email, first_name, last_name, tg_user_id)
+- **REQ-162:** System MUST have `sessions`/`payments` table (id, session_id, txn_id, plan, email_user, email_paypal, amount, currency, status, meta)
+- **REQ-163:** System MUST have `actions` table (id, type, ref, payload, created_at)
+- **REQ-164:** System MUST have `web_users` table (id, email, password_hash, role)
+
+## 4. Technical Requirements
+
+### 4.1 Technology Stack
+
+#### TR-4.1.1: Backend
+
+- **REQ-165:** Backend MUST use Node.js 18+ (LTS)
+- **REQ-166:** Backend MUST use Express.js or Fastify framework
+- **REQ-167:** Backend MUST use PostgreSQL 14+ database
+- **REQ-168:** Backend MUST use Prisma or TypeORM ORM
+- **REQ-169:** Backend MUST use JWT for authentication
+- **REQ-170:** Backend MUST use Zod or Joi for validation
+
+#### TR-4.1.2: Frontend
+
+- **REQ-171:** Frontend MUST use React 18+ or Next.js 14+
+- **REQ-172:** Frontend MUST use React Query for server state
+- **REQ-173:** Frontend MUST use React Hook Form + Zod for forms
+- **REQ-174:** Frontend MUST use Material-UI, Ant Design, or Tailwind CSS
+
+#### TR-4.1.3: Telegram Bot
+
+- **REQ-175:** Bot MUST use Telegraf or node-telegram-bot-api
+- **REQ-176:** Bot MUST use validator.js for email validation
+- **REQ-177:** Bot MUST use nodemailer for OTP (if implemented)
+
+#### TR-4.1.4: Payment Integration
+
+- **REQ-178:** System MUST use PayPal SDK (@paypal/checkout-server-sdk or paypal-rest-sdk)
+- **REQ-179:** System MUST verify PayPal webhook signatures
+
+### 4.2 API Requirements
+
+#### TR-4.2.1: API Design
+
+- **REQ-180:** API MUST follow RESTful conventions for admin endpoints
+- **REQ-181:** Webhook endpoints MUST accept POST only
+- **REQ-182:** API MUST return consistent response format: `{ success, data?, error? }`
+- **REQ-183:** API MUST use proper HTTP status codes (200, 201, 400, 401, 403, 404, 500)
+- **REQ-184:** API MUST implement pagination for list endpoints
+
+#### TR-4.2.2: Required Endpoints
+
+- **REQ-185:** System MUST provide `POST /api/webhook/bot`
+- **REQ-186:** System MUST provide `POST /api/webhook/paypal`
+- **REQ-187:** System MUST provide `POST /api/admin/auth/login`
+- **REQ-188:** System MUST provide `GET /api/admin/payments` (with filters, search, pagination)
+- **REQ-189:** System MUST provide `GET /api/admin/payments/:id`
+- **REQ-190:** System MUST provide `POST /api/admin/payments/:id/resend`
+- **REQ-191:** System MUST provide `PUT /api/admin/payments/:id/email`
+- **REQ-192:** System MUST provide `GET /api/admin/stats`
+- **REQ-193:** System MUST provide `GET /api/admin/actions`
+- **REQ-194:** System MUST provide `POST /api/admin/sessions`
+- **REQ-195:** System MUST provide `GET /api/admin/export`
+
+## 5. Deployment Requirements
+
+### 5.1 Infrastructure
+
+#### DR-5.1.1: Hosting
+
+- **REQ-196:** Backend API MUST be deployable on Render/Railway/Fly.io
+- **REQ-197:** Telegram Bot MUST be deployable on Render/Fly.io
+- **REQ-198:** Frontend MUST be deployable on Vercel/Netlify/Render
+- **REQ-199:** Database MUST be hosted on Supabase/Neon/Railway/AWS RDS
+
+#### DR-5.1.2: Containerization
+
+- **REQ-200:** System MUST use Docker for containerization
+- **REQ-201:** System MUST use Docker Compose for local development
+- **REQ-202:** System MUST use multi-stage builds for optimization
+- **REQ-203:** System MUST set up health checks
+
+#### DR-5.1.3: CI/CD
+
+- **REQ-204:** System MUST use GitHub Actions or GitLab CI
+- **REQ-205:** System MUST run tests before deployment
+- **REQ-206:** System MUST deploy to staging before production
+- **REQ-207:** System MUST implement rollback strategy
+
+### 5.2 Environment Configuration
+
+#### DR-5.2.1: Environment Variables
+
+- **REQ-208:** System MUST use .env files for local development
+- **REQ-209:** System MUST never commit .env files to Git
+- **REQ-210:** System MUST document all required environment variables
+- **REQ-211:** System MUST validate environment variables on startup
+- **REQ-212:** System MUST use secrets manager in production
+
+## 6. Documentation Requirements
+
+### 6.1 Technical Documentation
+
+#### DOC-6.1.1: Code Documentation
+
+- **REQ-213:** Code MUST have JSDoc comments for public APIs
+- **REQ-214:** Code MUST document complex business logic
+- **REQ-215:** Code MUST have README with installation instructions
+
+#### DOC-6.1.2: API Documentation
+
+- **REQ-216:** System SHOULD document API endpoints (Swagger/OpenAPI optional)
+- **REQ-217:** System MUST document all required environment variables
+- **REQ-218:** System MUST create troubleshooting guide
+
+### 6.2 User Documentation
+
+#### DOC-6.2.1: Admin Documentation
+
+- **REQ-219:** System MUST provide documentation for admin panel usage
+- **REQ-220:** System MUST explain how to use manual operations
+- **REQ-221:** System MUST document export functionality
+
+## 7. Testing Requirements
+
+### 7.1 Test Coverage
+
+#### TEST-7.1.1: Unit Tests
+
+- **REQ-222:** System MUST have unit tests for services and utilities
+- **REQ-223:** System MUST have unit tests for validation logic
+- **REQ-224:** System MUST achieve >80% code coverage
+
+#### TEST-7.1.2: Integration Tests
+
+- **REQ-225:** System MUST have integration tests for API endpoints
+- **REQ-226:** System MUST test full flow: session creation → bot → email → payment
+- **REQ-227:** System MUST test error handling
+
+#### TEST-7.1.3: E2E Tests
+
+- **REQ-228:** System MUST have E2E tests for user flows
+- **REQ-229:** System MUST test admin panel workflows
+- **REQ-230:** System MUST test webhook integrations
+
+## 8. Compliance & Legal Requirements
+
+### 8.1 Data Protection
+
+#### COMP-8.1.1: User Consent
+
+- **REQ-231:** System MUST display data processing policy in bot
+- **REQ-232:** System MUST obtain user consent before collecting email
+- **REQ-233:** System MUST comply with data protection regulations
+
+### 8.2 Audit & Compliance
+
+#### COMP-8.2.1: Audit Trail
+
+- **REQ-234:** System MUST log all important events to actions table
+- **REQ-235:** System MUST maintain audit trail for admin actions
+- **REQ-236:** System MUST store logs for compliance purposes
+
+---
+
+## Requirements Priority
+
+### Critical (Must Have)
+
+- All REQ-001 to REQ-100 (Core functionality, security, reliability)
+
+### High Priority (Should Have)
+
+- REQ-085 to REQ-088 (Google Sheets integration - optional)
+- REQ-216 (API documentation - optional but recommended)
+
+### Low Priority (Nice to Have)
+
+- Additional monitoring features
+- Advanced analytics features
+- Additional export formats
+
+---
+
+## Requirements Traceability
+
+Each requirement is traceable to:
+
+- **Business Rules:** Section 3
+- **Architecture:** architecture.mdc
+- **Implementation Plan:** plan.mdc
+- **System Scope:** docs/system-scope.md
