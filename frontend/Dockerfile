@@ -36,14 +36,35 @@ FROM nginx:alpine AS runner
 # Copy built files from builder
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 
-# Copy nginx configuration (optional, for SPA routing)
+# Create nginx configuration for SPA routing
 RUN echo 'server { \
     listen 80; \
     server_name _; \
     root /usr/share/nginx/html; \
     index index.html; \
+    \
+    # Gzip compression \
+    gzip on; \
+    gzip_vary on; \
+    gzip_min_length 1024; \
+    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json; \
+    \
+    # SPA routing - all routes go to index.html \
     location / { \
         try_files $uri $uri/ /index.html; \
+    } \
+    \
+    # Health check endpoint \
+    location /health { \
+        access_log off; \
+        return 200 "healthy\n"; \
+        add_header Content-Type text/plain; \
+    } \
+    \
+    # Cache static assets \
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ { \
+        expires 1y; \
+        add_header Cache-Control "public, immutable"; \
     } \
 }' > /etc/nginx/conf.d/default.conf
 
