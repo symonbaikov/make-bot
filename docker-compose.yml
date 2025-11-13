@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
@@ -17,7 +15,75 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - make-bot-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: make-bot-backend
+    ports:
+      - "3100:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://makebot:makebot123@postgres:5432/make_bot?schema=public
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173}
+      - MAKE_WEBHOOK_URL=${MAKE_WEBHOOK_URL:-https://hook.us1.make.com/your-webhook-url}
+      - TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME:-your_bot_username}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - make-bot-network
+    restart: unless-stopped
+
+  bot:
+    build:
+      context: .
+      dockerfile: bot/Dockerfile
+    container_name: make-bot-bot
+    ports:
+      - "3101:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-your-telegram-bot-token}
+      - API_URL=http://backend:3000
+      - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID:-your-paypal-client-id}
+      - PAYPAL_MODE=${PAYPAL_MODE:-sandbox}
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - make-bot-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: make-bot-frontend
+    ports:
+      - "5174:80"
+    networks:
+      - make-bot-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+
+networks:
+  make-bot-network:
+    driver: bridge
 
