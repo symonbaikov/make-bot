@@ -29,16 +29,21 @@ export const logger = winston.createLogger({
 });
 
 if (process.env.NODE_ENV === 'production') {
-  logger.add(
-    new winston.transports.File({
-      filename: 'logs/error.log',
-      level: 'error',
-    })
-  );
-  logger.add(
-    new winston.transports.File({
-      filename: 'logs/combined.log',
-    })
-  );
+  try {
+    // Try to add file transports, but don't fail if directory doesn't exist
+    logger.add(
+      new winston.transports.File({
+        filename: 'logs/error.log',
+        level: 'error',
+      })
+    );
+    logger.add(
+      new winston.transports.File({
+        filename: 'logs/combined.log',
+      })
+    );
+  } catch (error) {
+    // If file transport fails (e.g., no write permissions), continue with console only
+    logger.warn('File logging unavailable, using console only', { error });
+  }
 }
-

@@ -51,6 +51,9 @@ COPY --from=builder /app/backend/prisma ./prisma
 # Copy Prisma Client (it's in root node_modules in workspace)
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
+# Create logs directory with proper permissions (before switching to nodejs user)
+RUN mkdir -p /app/logs && chown -R nodejs:nodejs /app && chmod -R 755 /app/logs
+
 USER nodejs
 
 EXPOSE 3000
