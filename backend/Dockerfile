@@ -5,12 +5,14 @@ FROM node:18-alpine AS base
 FROM base AS deps
 WORKDIR /app
 
-# Copy package files
+# Copy root package.json for workspace setup
 COPY package.json package-lock.json* ./
+
+# Copy backend package.json
 COPY backend/package.json ./backend/
 
 # Install root dependencies (for workspace)
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Install backend dependencies
 WORKDIR /app/backend
@@ -20,7 +22,7 @@ RUN npm install --legacy-peer-deps
 FROM base AS builder
 WORKDIR /app
 
-# Copy dependencies
+# Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/backend/node_modules ./backend/node_modules
 
@@ -49,8 +51,8 @@ COPY --from=builder /app/backend/node_modules ./node_modules
 COPY --from=builder /app/backend/package.json ./
 COPY --from=builder /app/backend/prisma ./prisma
 
-# Copy Prisma Client
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+# Copy Prisma Client from root node_modules if it exists
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma 2>/dev/null || true
 
 USER nodejs
 

@@ -5,12 +5,14 @@ FROM node:18-alpine AS base
 FROM base AS deps
 WORKDIR /app
 
-# Copy package files
+# Copy root package.json for workspace setup
 COPY package.json package-lock.json* ./
+
+# Copy bot package.json
 COPY bot/package.json ./bot/
 
 # Install root dependencies (for workspace)
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Install bot dependencies
 WORKDIR /app/bot
@@ -20,7 +22,7 @@ RUN npm install --legacy-peer-deps
 FROM base AS builder
 WORKDIR /app
 
-# Copy dependencies
+# Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/bot/node_modules ./bot/node_modules
 
@@ -30,7 +32,7 @@ COPY package.json ./
 
 # Build bot (TypeScript compilation)
 WORKDIR /app/bot
-RUN npx tsc
+RUN npm run build
 
 # Production stage
 FROM base AS runner
