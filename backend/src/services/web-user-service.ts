@@ -1,9 +1,11 @@
 import { WebUser, Role } from '@prisma/client';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { prisma } from '../utils/prisma';
 import { NotFoundError, UnauthorizedError, ValidationError } from '../utils/errors';
 import { Pool } from 'pg';
+import { emailService } from './email-service';
+import { logger } from '../utils/logger';
 
 export interface LoginResult {
   user: Omit<WebUser, 'passwordHash'>;
@@ -11,23 +13,54 @@ export interface LoginResult {
 }
 
 // Direct PostgreSQL connection pool for bypassing Prisma issues
-// Remove schema and sslmode parameters from URL for pg library
-const dbUrl = (process.env.DATABASE_URL || '')
-  .replace(/[?&]schema=[^&]*/g, '')
-  .replace(/[?&]sslmode=[^&]*/g, '')
-  .replace(/[?&]$/, '')
-  .replace(/&&/g, '&')
-  .replace(/&$/, '')
-  .replace(/\?$/, '');
-// Use port 5433 to connect to Docker PostgreSQL (5432 is used by local PostgreSQL)
-const pool = new Pool({
-  user: 'makebot',
-  password: 'makebot123',
-  host: '127.0.0.1',
-  port: 5433,
-  database: 'make_bot',
-  connectionTimeoutMillis: 5000,
-});
+// Parse DATABASE_URL or use fallback connection
+let pool: Pool;
+
+try {
+  const dbUrl = process.env.DATABASE_URL;
+  if (dbUrl) {
+    // Parse DATABASE_URL
+    const url = new URL(dbUrl);
+    const port = url.port ? parseInt(url.port) : url.protocol === 'postgresql:' ? 5432 : 5433;
+    pool = new Pool({
+      user: url.username,
+      password: url.password,
+      host: url.hostname,
+      port: port,
+      database: url.pathname.slice(1).split('?')[0], // Remove leading '/' and query params
+      connectionTimeoutMillis: 5000,
+      ssl: url.searchParams.get('sslmode') === 'require' ? { rejectUnauthorized: false } : false,
+    });
+    logger.info('Database pool initialized from DATABASE_URL', {
+      host: url.hostname,
+      port: port,
+      database: url.pathname.slice(1).split('?')[0],
+    });
+  } else {
+    // Fallback to default connection (for local development)
+    // Use port 5433 for Docker PostgreSQL (5432 is used by local PostgreSQL)
+    pool = new Pool({
+      user: process.env.DB_USER || 'makebot',
+      password: process.env.DB_PASSWORD || 'makebot123',
+      host: process.env.DB_HOST || '127.0.0.1',
+      port: parseInt(process.env.DB_PORT || '5433'),
+      database: process.env.DB_NAME || 'make_bot',
+      connectionTimeoutMillis: 5000,
+    });
+    logger.info('Database pool initialized with fallback connection', {
+      host: process.env.DB_HOST || '127.0.0.1',
+      port: parseInt(process.env.DB_PORT || '5433'),
+      database: process.env.DB_NAME || 'make_bot',
+    });
+  }
+} catch (error) {
+  logger.error('Failed to initialize database pool', { error });
+  // Create a dummy pool that will fail gracefully
+  pool = new Pool({
+    connectionString: 'invalid',
+    connectionTimeoutMillis: 1000,
+  });
+}
 
 export class WebUserService {
   async findByEmail(email: string): Promise<WebUser | null> {
@@ -89,24 +122,79 @@ export class WebUserService {
   }
 
   async login(email: string, password: string): Promise<LoginResult> {
-    // Use direct SQL query to bypass Prisma connection issues
-    let result;
+    // Try Prisma first, fallback to direct SQL if needed
+    let user: WebUser | null = null;
+
     try {
-      result = await pool.query(
-        'SELECT id, email, password_hash, role, first_name, last_name, created_at, updated_at FROM web_users WHERE email = $1 LIMIT 1',
-        [email]
-      );
-    } catch (error: any) {
-      console.error('Database query error:', error.message);
-      throw new Error(`Database connection failed: ${error.message}`);
+      // Try Prisma first
+      logger.debug('Attempting Prisma query for user', { email });
+      user = await prisma.webUser.findUnique({
+        where: { email },
+      });
+      logger.debug('Prisma query successful', { email, found: !!user });
+    } catch (prismaError: any) {
+      const prismaErrorMessage = prismaError.message || String(prismaError);
+      const isConnectionError = prismaErrorMessage.includes('Can\'t reach database server') ||
+                                 prismaErrorMessage.includes('ECONNREFUSED') ||
+                                 prismaErrorMessage.includes('connection');
+      
+      logger.warn('Prisma query failed, trying direct SQL', {
+        error: prismaErrorMessage,
+        stack: prismaError.stack,
+        code: prismaError.code,
+        isConnectionError,
+      });
+
+      // Fallback to direct SQL query
+      try {
+        logger.debug('Attempting direct SQL query', { email });
+        const result = await pool.query(
+          'SELECT id, email, password_hash, role, first_name, last_name, created_at, updated_at FROM web_users WHERE email = $1 LIMIT 1',
+          [email]
+        );
+
+        logger.debug('Direct SQL query successful', {
+          email,
+          rowsFound: result.rows.length,
+        });
+
+        if (result.rows.length > 0) {
+          const row = result.rows[0];
+          user = {
+            id: row.id,
+            email: row.email,
+            passwordHash: row.password_hash,
+            role: row.role as Role,
+            firstName: row.first_name,
+            lastName: row.last_name,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+          };
+        }
+      } catch (sqlError: any) {
+        const errorMessage = sqlError.code === 'ECONNREFUSED' 
+          ? `Database connection refused. Please ensure PostgreSQL is running on ${pool['options']?.host || 'localhost'}:${pool['options']?.port || 5433}. If using Docker, run: docker start make-bot-postgres`
+          : `Database connection failed: ${sqlError.message}`;
+        
+        logger.error('Direct SQL query also failed', { 
+          error: sqlError.message,
+          code: sqlError.code,
+          stack: sqlError.stack,
+          poolConfig: {
+            host: pool['options']?.host,
+            port: pool['options']?.port,
+            database: pool['options']?.database,
+          },
+        });
+        throw new Error(errorMessage);
+      }
     }
 
-    const user = result.rows[0];
     if (!user) {
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
     if (!isValidPassword) {
       throw new UnauthorizedError('Invalid email or password');
     }
@@ -118,6 +206,10 @@ export class WebUserService {
 
     const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
 
+    const signOptions = {
+      expiresIn,
+    } as SignOptions;
+
     const token = jwt.sign(
       {
         id: user.id,
@@ -125,18 +217,18 @@ export class WebUserService {
         role: user.role as Role,
       },
       secret,
-      { expiresIn }
-    ) as string;
+      signOptions
+    );
 
     return {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role as Role,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        createdAt: user.created_at,
-        updatedAt: user.updated_at,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       },
       token,
     };
@@ -185,6 +277,132 @@ export class WebUserService {
     });
 
     return users.map(({ passwordHash: _passwordHash, ...user }) => user);
+  }
+
+  /**
+   * Request password reset code
+   * Generates a 6-digit code and sends it via email
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this.findByEmail(email);
+
+    // Don't reveal if user exists or not for security
+    if (!user) {
+      logger.warn('Password reset requested for non-existent email', { email });
+      // Still return success to prevent email enumeration
+      return;
+    }
+
+    // Generate 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Code expires in 15 minutes
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+
+    // Invalidate all previous unused codes for this user
+    await prisma.passwordResetCode.updateMany({
+      where: {
+        userId: user.id,
+        used: false,
+      },
+      data: {
+        used: true,
+      },
+    });
+
+    // Create new reset code
+    await prisma.passwordResetCode.create({
+      data: {
+        code,
+        userId: user.id,
+        email: user.email,
+        expiresAt,
+      },
+    });
+
+    // Send email with code
+    try {
+      await emailService.sendPasswordResetCode(user.email, code);
+      logger.info('Password reset code sent', { email: user.email });
+    } catch (error) {
+      logger.error('Failed to send password reset email', {
+        email: user.email,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Don't throw error to prevent email enumeration
+    }
+  }
+
+  /**
+   * Login using password reset code
+   * Returns JWT token if code is valid
+   */
+  async loginWithResetCode(email: string, code: string): Promise<LoginResult> {
+    const user = await this.findByEmail(email);
+    if (!user) {
+      throw new UnauthorizedError('Invalid email or code');
+    }
+
+    // Find valid reset code
+    const resetCode = await prisma.passwordResetCode.findFirst({
+      where: {
+        code,
+        userId: user.id,
+        email: user.email,
+        used: false,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    if (!resetCode) {
+      throw new UnauthorizedError('Invalid or expired code');
+    }
+
+    // Mark code as used
+    await prisma.passwordResetCode.update({
+      where: { id: resetCode.id },
+      data: { used: true },
+    });
+
+    // Generate JWT token
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET is not configured');
+    }
+
+    const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+
+    const signOptions = {
+      expiresIn,
+    } as SignOptions;
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role as Role,
+      },
+      secret,
+      signOptions
+    );
+
+    logger.info('User logged in with reset code', { email: user.email });
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role as Role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+      token,
+    };
   }
 }
 

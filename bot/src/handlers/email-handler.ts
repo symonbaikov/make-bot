@@ -1,15 +1,11 @@
 import { BotContext } from '../middleware/session-middleware';
 import { isValidEmail, normalizeEmail } from '../utils/email-validator';
-import { apiClient } from '../utils/api-client';
-import { getPayPalPaymentUrl } from '../utils/paypal';
 import { logger } from '../utils/logger';
 
 export async function handleEmailInput(ctx: BotContext): Promise<void> {
   try {
     if (!ctx.session) {
-      await ctx.reply(
-        '❌ Please start the conversation with /start command first.'
-      );
+      await ctx.reply('❌ Будь ласка, спочатку почніть розмову командою /start.');
       return;
     }
 
@@ -20,14 +16,14 @@ export async function handleEmailInput(ctx: BotContext): Promise<void> {
 
     if (!ctx.session.sessionId) {
       await ctx.reply(
-        '❌ Session ID is missing. Please use /start command with your session ID.'
+        '❌ Відсутній ID сесії. Будь ласка, використайте команду /start з вашим ID сесії.'
       );
       return;
     }
 
     const messageText = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
     if (!messageText) {
-      await ctx.reply('❌ Please send a valid email address.');
+      await ctx.reply('❌ Будь ласка, надішліть валідну адресу електронної пошти.');
       return;
     }
 
@@ -36,8 +32,8 @@ export async function handleEmailInput(ctx: BotContext): Promise<void> {
     // Validate email
     if (!isValidEmail(email)) {
       await ctx.reply(
-        '❌ Invalid email format. Please send a valid email address.\n\n' +
-        'Example: user@example.com'
+        '❌ Невірний формат email. Будь ласка, надішліть валідну адресу електронної пошти.\n\n' +
+          'Приклад: user@example.com'
       );
       return;
     }
@@ -48,15 +44,12 @@ export async function handleEmailInput(ctx: BotContext): Promise<void> {
     ctx.session.waitingForFirstName = true;
 
     await ctx.reply(
-      `✅ Email received!\n\n` +
-      `📧 Email: ${email}\n\n` +
-      `Now, please provide your first name:`
+      `✅ Email отримано!\n\n` + `📧 Email: ${email}\n\n` + `Тепер, будь ласка, надайте ваше ім'я:`
     );
   } catch (error) {
     logger.error('Error in email handler', error);
     await ctx.reply(
-      '❌ An error occurred while processing your email. Please try again.'
+      '❌ Сталася помилка під час обробки вашого email. Будь ласка, спробуйте ще раз.'
     );
   }
 }
-

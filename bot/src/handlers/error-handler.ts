@@ -6,9 +6,9 @@ export async function handleError(ctx: BotContext, error: unknown): Promise<void
 
   try {
     await ctx.reply(
-      '❌ An unexpected error occurred.\n\n' +
-      'Please try again or use /start to restart the conversation.\n\n' +
-      'If the problem persists, please contact support.'
+      '❌ Сталася неочікувана помилка.\n\n' +
+      'Будь ласка, спробуйте ще раз або використайте /start, щоб перезапустити розмову.\n\n' +
+      'Якщо проблема не зникає, будь ласка, зверніться до підтримки.'
     );
   } catch (replyError) {
     logger.error('Failed to send error message', replyError);

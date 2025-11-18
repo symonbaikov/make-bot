@@ -49,15 +49,15 @@ export async function handleStart(ctx: BotContext): Promise<void> {
 
     if (sessionId) {
       // Session ID provided - get session data from backend
-      await ctx.reply('⏳ Checking your session...');
+      await ctx.reply('⏳ Перевіряю вашу сесію...');
 
       const sessionData = await getSessionData(sessionId);
 
       if (!sessionData) {
         await ctx.reply(
-          `❌ Session not found.\n\n` +
-          `The session ID "${sessionId}" is invalid or expired.\n\n` +
-          `Please contact support or use a valid session link.`
+          `❌ Сесію не знайдено.\n\n` +
+          `ID сесії "${sessionId}" недійсний або закінчився.\n\n` +
+          `Будь ласка, зверніться до підтримки або використайте дійсне посилання на сесію.`
         );
         logger.warn('Invalid session_id', { sessionId, userId: ctx.from?.id });
         return;
@@ -67,10 +67,10 @@ export async function handleStart(ctx: BotContext): Promise<void> {
       const session = await apiClient.getSession(sessionId);
       if (session?.status === 'COMPLETED') {
         await ctx.reply(
-          `✅ Your payment has already been completed!\n\n` +
+          `✅ Ваш платіж вже завершено!\n\n` +
           `📧 Email: ${session.finalEmail || session.emailUser || session.emailPaypal || 'N/A'}\n` +
-          `📋 Session ID: ${sessionId}\n\n` +
-          `If you have any questions, please contact support.`
+          `📋 ID сесії: ${sessionId}\n\n` +
+          `Якщо у вас є питання, будь ласка, зверніться до підтримки.`
         );
         return;
       }
@@ -83,24 +83,24 @@ export async function handleStart(ctx: BotContext): Promise<void> {
       ctx.session.waitingForEmail = true;
 
       await ctx.reply(
-        `👋 Welcome!\n\n` +
-        `I found your session: ${sessionId}\n\n` +
-        `📋 Plan: ${sessionData.plan}\n` +
-        `💵 Amount: $${sessionData.amount} ${sessionData.currency || 'USD'}\n\n` +
-        `To proceed, please provide your email address.\n\n` +
-        `📧 Please send me your email address:`
+        `👋 Вітаємо!\n\n` +
+        `Я знайшов вашу сесію: ${sessionId}\n\n` +
+        `📋 План: ${sessionData.plan}\n` +
+        `💵 Сума: $${sessionData.amount} ${sessionData.currency || 'USD'}\n\n` +
+        `Щоб продовжити, будь ласка, надайте вашу адресу електронної пошти.\n\n` +
+        `📧 Будь ласка, надішліть мені вашу адресу електронної пошти:`
       );
 
       logger.info('Start command with session_id', { sessionId, userId: ctx.from?.id });
     } else {
       // No session ID - provide instructions
       await ctx.reply(
-        `👋 Welcome!\n\n` +
-        `This bot helps you complete your payment process.\n\n` +
-        `To get started, please use the link provided to you, ` +
-        `which includes your session ID.\n\n` +
-        `If you have a session ID, you can use:\n` +
-        `/start <your_session_id>`
+        `👋 Вітаємо!\n\n` +
+        `Цей бот допомагає вам завершити процес оплати.\n\n` +
+        `Щоб почати, будь ласка, використайте посилання, яке вам надали, ` +
+        `яке містить ваш ID сесії.\n\n` +
+        `Якщо у вас є ID сесії, ви можете використати:\n` +
+        `/start <ваш_id_сесії>`
       );
 
       logger.info('Start command without session_id', { userId: ctx.from?.id });
@@ -108,7 +108,7 @@ export async function handleStart(ctx: BotContext): Promise<void> {
   } catch (error) {
     logger.error('Error in start handler', error);
     await ctx.reply(
-      '❌ An error occurred. Please try again later or contact support.'
+      '❌ Сталася помилка. Будь ласка, спробуйте пізніше або зверніться до підтримки.'
     );
   }
 }

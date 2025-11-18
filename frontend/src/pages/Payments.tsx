@@ -41,25 +41,25 @@ export function Payments() {
   };
 
   if (isLoading) return <Loading />;
-  if (error) return <Error message={error instanceof Error ? error.message : 'Failed to load payments'} onRetry={() => refetch()} />;
+  if (error) return <Error message={error instanceof Error ? error.message : 'Не вдалося завантажити платежі'} onRetry={() => refetch()} />;
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Payments</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Платежі</h1>
       </div>
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Статус</label>
             <select
               value={params.status || ''}
               onChange={(e) => handleFilterChange('status', e.target.value || undefined)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             >
-              <option value="">All</option>
+              <option value="">Всі</option>
               {SessionStatusValues.map((status) => (
                 <option key={status} value={status}>
                   {status}
@@ -68,13 +68,13 @@ export function Payments() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Plan</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">План</label>
             <select
               value={params.plan || ''}
               onChange={(e) => handleFilterChange('plan', e.target.value || undefined)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             >
-              <option value="">All</option>
+              <option value="">Всі</option>
               {PlanValues.map((plan) => (
                 <option key={plan} value={plan}>
                   {plan}
@@ -83,17 +83,17 @@ export function Payments() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Пошук</label>
             <input
               type="text"
-              placeholder="Session ID, Email, Txn ID..."
+              placeholder="ID сесії, Email, ID транзакції..."
               value={params.search || ''}
               onChange={(e) => handleFilterChange('search', e.target.value || undefined)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Дата початку</label>
             <input
               type="date"
               value={params.startDate || ''}
@@ -106,7 +106,7 @@ export function Payments() {
 
       {/* Table */}
       {data && data.data.length === 0 ? (
-        <EmptyState title="No payments found" message="Try adjusting your filters." />
+        <EmptyState title="Платежі не знайдено" message="Спробуйте змінити фільтри." />
       ) : (
         <>
           <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -114,25 +114,25 @@ export function Payments() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Session ID
+                    ID сесії
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Email
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Plan
+                    План
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
+                    Сума
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    Статус
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
+                    Дата
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+                    Дії
                   </th>
                 </tr>
               </thead>
@@ -162,7 +162,7 @@ export function Payments() {
                         to={`/payments/${session.sessionId}`}
                         className="text-blue-600 hover:text-blue-900"
                       >
-                        View
+                        Переглянути
                       </Link>
                     </td>
                   </tr>
@@ -175,7 +175,7 @@ export function Payments() {
           {data && data.totalPages > 1 && (
             <div className="flex items-center justify-between bg-white px-4 py-3 rounded-lg shadow">
               <div className="text-sm text-gray-700">
-                Showing {((data.page - 1) * data.limit) + 1} to {Math.min(data.page * data.limit, data.total)} of {data.total} results
+                Показано {((data.page - 1) * data.limit) + 1} до {Math.min(data.page * data.limit, data.total)} з {data.total} результатів
               </div>
               <div className="flex space-x-2">
                 <button
@@ -183,14 +183,14 @@ export function Payments() {
                   disabled={data.page === 1}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Previous
+                  Попередня
                 </button>
                 <button
                   onClick={() => handlePageChange(data.page + 1)}
                   disabled={data.page >= data.totalPages}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Next
+                  Наступна
                 </button>
               </div>
             </div>

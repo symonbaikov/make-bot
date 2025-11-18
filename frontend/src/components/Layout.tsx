@@ -17,10 +17,10 @@ export function Layout({ children }: LayoutProps) {
   };
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: '📊' },
-    { name: 'Payments', href: '/payments', icon: '💳' },
-    { name: 'Activity Log', href: '/actions', icon: '📝' },
-    { name: 'Create Session', href: '/sessions/create', icon: '➕' },
+    { name: 'Панель управління', href: '/dashboard', icon: '📊' },
+    { name: 'Платежі', href: '/payments', icon: '💳' },
+    { name: 'Журнал активності', href: '/actions', icon: '📝' },
+    { name: 'Створити сесію', href: '/sessions/create', icon: '➕' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -32,7 +32,7 @@ export function Layout({ children }: LayoutProps) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-center h-16 border-b border-gray-200">
-            <h1 className="text-xl font-bold text-gray-800">Make Bot Admin</h1>
+            <h1 className="text-xl font-bold text-gray-800">Адмін-панель Make Bot</h1>
           </div>
 
           {/* Navigation */}
@@ -65,7 +65,7 @@ export function Layout({ children }: LayoutProps) {
               onClick={handleLogout}
               className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             >
-              Logout
+              Вийти
             </button>
           </div>
         </div>

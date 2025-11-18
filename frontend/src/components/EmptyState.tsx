@@ -8,8 +8,8 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({
-  title = 'No data',
-  message = 'There is no data to display.',
+  title = 'Немає даних',
+  message = 'Немає даних для відображення.',
   action,
 }: EmptyStateProps) {
   return (

@@ -115,6 +115,26 @@ model WebUser {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  passwordResetCodes PasswordResetCode[]
+
   @@map("web_users")
+}
+
+model PasswordResetCode {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  userId    String   @map("user_id")
+  email     String
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user WebUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([code])
+  @@index([userId])
+  @@index([email])
+  @@index([expiresAt])
+  @@map("password_reset_codes")
 }
 

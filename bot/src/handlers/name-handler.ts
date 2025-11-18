@@ -24,7 +24,7 @@ export async function handleFirstNameInput(ctx: BotContext): Promise<void> {
   try {
     if (!ctx.session) {
       await ctx.reply(
-        '❌ Please start the conversation with /start command first.'
+        '❌ Будь ласка, спочатку почніть розмову командою /start.'
       );
       return;
     }
@@ -35,7 +35,7 @@ export async function handleFirstNameInput(ctx: BotContext): Promise<void> {
 
     const messageText = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
     if (!messageText) {
-      await ctx.reply('❌ Please send a valid first name.');
+      await ctx.reply('❌ Будь ласка, надішліть валідне ім\'я.');
       return;
     }
 
@@ -44,8 +44,8 @@ export async function handleFirstNameInput(ctx: BotContext): Promise<void> {
     // Validate first name
     if (!isValidName(firstName)) {
       await ctx.reply(
-        '❌ Invalid first name format. Please use only letters, spaces, hyphens, and apostrophes.\n\n' +
-        'Example: John, Maria, Jean-Pierre'
+        '❌ Невірний формат імені. Будь ласка, використовуйте тільки літери, пробіли, дефіси та апострофи.\n\n' +
+        'Приклад: Іван, Марія, Жан-П\'єр'
       );
       return;
     }
@@ -56,9 +56,9 @@ export async function handleFirstNameInput(ctx: BotContext): Promise<void> {
     ctx.session.waitingForLastName = true;
 
     await ctx.reply(
-      `✅ First name received!\n\n` +
-      `👤 First name: ${firstName}\n\n` +
-      `Now, please provide your last name:`
+      `✅ Ім'я отримано!\n\n` +
+      `👤 Ім'я: ${firstName}\n\n` +
+      `Тепер, будь ласка, надайте ваше прізвище:`
     );
 
     logger.info('First name collected', {
@@ -69,7 +69,7 @@ export async function handleFirstNameInput(ctx: BotContext): Promise<void> {
   } catch (error) {
     logger.error('Error in first name handler', error);
     await ctx.reply(
-      '❌ An error occurred while processing your first name. Please try again.'
+      '❌ Сталася помилка під час обробки вашого імені. Будь ласка, спробуйте ще раз.'
     );
   }
 }
@@ -78,7 +78,7 @@ export async function handleLastNameInput(ctx: BotContext): Promise<void> {
   try {
     if (!ctx.session) {
       await ctx.reply(
-        '❌ Please start the conversation with /start command first.'
+        '❌ Будь ласка, спочатку почніть розмову командою /start.'
       );
       return;
     }
@@ -89,7 +89,7 @@ export async function handleLastNameInput(ctx: BotContext): Promise<void> {
 
     const messageText = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
     if (!messageText) {
-      await ctx.reply('❌ Please send a valid last name.');
+      await ctx.reply('❌ Будь ласка, надішліть валідне прізвище.');
       return;
     }
 
@@ -98,8 +98,8 @@ export async function handleLastNameInput(ctx: BotContext): Promise<void> {
     // Validate last name
     if (!isValidName(lastName)) {
       await ctx.reply(
-        '❌ Invalid last name format. Please use only letters, spaces, hyphens, and apostrophes.\n\n' +
-        'Example: Smith, Garcia, O\'Connor'
+        '❌ Невірний формат прізвища. Будь ласка, використовуйте тільки літери, пробіли, дефіси та апострофи.\n\n' +
+        'Приклад: Іванов, Гарсія, О\'Коннор'
       );
       return;
     }
@@ -110,10 +110,10 @@ export async function handleLastNameInput(ctx: BotContext): Promise<void> {
     ctx.session.waitingForPhoneNumber = true;
 
     await ctx.reply(
-      `✅ Last name received!\n\n` +
-      `👤 Last name: ${lastName}\n\n` +
-      `Now, please provide your phone number (international format with +):\n\n` +
-      `Example: +1234567890, +79123456789`
+      `✅ Прізвище отримано!\n\n` +
+      `👤 Прізвище: ${lastName}\n\n` +
+      `Тепер, будь ласка, надайте ваш номер телефону (міжнародний формат з +):\n\n` +
+      `Приклад: +380123456789, +79123456789`
     );
 
     logger.info('Last name collected', {
@@ -124,7 +124,7 @@ export async function handleLastNameInput(ctx: BotContext): Promise<void> {
   } catch (error) {
     logger.error('Error in last name handler', error);
     await ctx.reply(
-      '❌ An error occurred while processing your last name. Please try again.'
+      '❌ Сталася помилка під час обробки вашого прізвища. Будь ласка, спробуйте ще раз.'
     );
   }
 }

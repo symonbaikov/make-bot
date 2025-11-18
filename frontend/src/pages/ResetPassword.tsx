@@ -1,40 +1,47 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../contexts/AuthContext';
+import { apiService } from '../services/api';
 import { toast } from 'react-toastify';
 
-const loginSchema = z.object({
+const resetPasswordSchema = z.object({
   email: z.string().email('Невірна адреса електронної пошти'),
-  password: z.string().min(1, 'Пароль обов\'язковий'),
+  code: z.string().length(6, 'Код повинен містити 6 цифр').regex(/^\d+$/, 'Код повинен містити тільки цифри'),
 });
 
-type LoginFormData = z.infer<typeof loginSchema>;
+type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
-export function Login() {
-  const { login } = useAuth();
+export function ResetPassword() {
+  const { loginWithResetCode } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+
+  const emailFromUrl = searchParams.get('email') || '';
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<ResetPasswordFormData>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      email: emailFromUrl,
+    },
   });
 
-  const onSubmit = async (data: LoginFormData) => {
+  const onSubmit = async (data: ResetPasswordFormData) => {
     setIsLoading(true);
     try {
-      await login(data);
+      await loginWithResetCode(data.email, data.code);
       toast.success('Вхід успішний!');
       navigate('/dashboard');
     } catch (error) {
-      console.error('Login error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Помилка входу';
+      console.error('Reset password login error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Невірний або прострочений код';
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -51,8 +58,11 @@ export function Login() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Вхід до адмін-панелі
+            Вхід по коду
           </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Введіть код, який було надіслано на вашу електронну пошту
+          </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleFormSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
@@ -72,30 +82,20 @@ export function Login() {
               )}
             </div>
             <div>
-              <label htmlFor="password" className="sr-only">
-                Пароль
+              <label htmlFor="code" className="sr-only">
+                Код
               </label>
               <input
-                {...register('password')}
-                type="password"
-                autoComplete="current-password"
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Пароль"
+                {...register('code')}
+                type="text"
+                maxLength={6}
+                autoComplete="one-time-code"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm text-center text-2xl tracking-widest"
+                placeholder="000000"
               />
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+              {errors.code && (
+                <p className="mt-1 text-sm text-red-600">{errors.code.message}</p>
               )}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="text-sm">
-              <Link
-                to="/forgot-password"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
-                Забули пароль?
-              </Link>
             </div>
           </div>
 
@@ -108,9 +108,31 @@ export function Login() {
               {isLoading ? 'Вхід...' : 'Увійти'}
             </button>
           </div>
+
+          <div className="flex items-center justify-between">
+            <div className="text-sm">
+              <Link
+                to="/forgot-password"
+                className="font-medium text-blue-600 hover:text-blue-500"
+              >
+                Надіслати код ще раз
+              </Link>
+            </div>
+            <div className="text-sm">
+              <Link
+                to="/login"
+                className="font-medium text-blue-600 hover:text-blue-500"
+              >
+                Повернутися до входу
+              </Link>
+            </div>
+          </div>
         </form>
       </div>
     </div>
   );
 }
+
+
+
 

@@ -35,11 +35,53 @@ api.interceptors.response.use(
 export const apiService = {
   // Auth
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
-    const response = await api.post<ApiResponse<LoginResponse>>('/api/admin/auth/login', credentials);
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error?.message || 'Login failed');
+    try {
+      const response = await api.post<ApiResponse<LoginResponse>>('/api/admin/auth/login', credentials);
+      if (!response.data.success || !response.data.data) {
+        throw new Error(response.data.error?.message || 'Login failed');
+      }
+      return response.data.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<ApiResponse>;
+        const errorMessage = axiosError.response?.data?.error?.message || axiosError.message || 'Login failed';
+        throw new Error(errorMessage);
+      }
+      throw error;
     }
-    return response.data.data;
+  },
+
+  async requestPasswordReset(email: string): Promise<void> {
+    try {
+      const response = await api.post<ApiResponse<{ message: string }>>('/api/admin/auth/forgot-password', { email });
+      if (!response.data.success) {
+        throw new Error(response.data.error?.message || 'Failed to request password reset');
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<ApiResponse>;
+        const errorMessage = axiosError.response?.data?.error?.message || axiosError.message || 'Failed to request password reset';
+        throw new Error(errorMessage);
+      }
+      throw error;
+    }
+  },
+
+  async loginWithResetCode(email: string, code: string): Promise<LoginResponse> {
+    try {
+      const response = await api.post<ApiResponse<LoginResponse>>('/api/admin/auth/reset-password', { email, code });
+      if (!response.data.success || !response.data.data) {
+        throw new Error(response.data.error?.message || 'Invalid or expired code');
+      }
+      return response.data.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<ApiResponse>;
+        const errorMessage = axiosError.response?.data?.error?.message || axiosError.message || 'Invalid or expired code';
+        throw new Error(errorMessage);
+      }
+      throw error;
+    }
   },
 
   // Sessions/Payments

@@ -10,8 +10,8 @@ export function Dashboard() {
   });
 
   if (isLoading) return <Loading />;
-  if (error) return <Error message={error instanceof Error ? error.message : 'Failed to load stats'} onRetry={() => refetch()} />;
-  if (!stats) return <div>No stats available</div>;
+  if (error) return <Error message={error instanceof Error ? error.message : 'Не вдалося завантажити статистику'} onRetry={() => refetch()} />;
+  if (!stats) return <div>Статистика недоступна</div>;
 
   const conversionRate = stats.conversionFunnel.started > 0
     ? ((stats.conversionFunnel.completed / stats.conversionFunnel.started) * 100).toFixed(1)
@@ -19,35 +19,35 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+      <h1 className="text-3xl font-bold text-gray-900">Панель управління</h1>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm font-medium text-gray-500">Total Sessions</div>
+          <div className="text-sm font-medium text-gray-500">Всього сесій</div>
           <div className="mt-2 text-3xl font-bold text-gray-900">{stats.totalSessions}</div>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm font-medium text-gray-500">Total Revenue</div>
+          <div className="text-sm font-medium text-gray-500">Загальний дохід</div>
           <div className="mt-2 text-3xl font-bold text-gray-900">${stats.totalRevenue.toFixed(2)}</div>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm font-medium text-gray-500">Conversion Rate</div>
+          <div className="text-sm font-medium text-gray-500">Конверсія</div>
           <div className="mt-2 text-3xl font-bold text-gray-900">{conversionRate}%</div>
         </div>
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm font-medium text-gray-500">Completed</div>
+          <div className="text-sm font-medium text-gray-500">Завершено</div>
           <div className="mt-2 text-3xl font-bold text-gray-900">{stats.conversionFunnel.completed}</div>
         </div>
       </div>
 
       {/* Conversion Funnel */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Conversion Funnel</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Воронка конверсії</h2>
         <div className="space-y-4">
           <div>
             <div className="flex justify-between mb-1">
-              <span className="text-sm font-medium text-gray-700">Started</span>
+              <span className="text-sm font-medium text-gray-700">Почато</span>
               <span className="text-sm text-gray-600">{stats.conversionFunnel.started}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -56,7 +56,7 @@ export function Dashboard() {
           </div>
           <div>
             <div className="flex justify-between mb-1">
-              <span className="text-sm font-medium text-gray-700">Awaiting Payment</span>
+              <span className="text-sm font-medium text-gray-700">Очікування оплати</span>
               <span className="text-sm text-gray-600">{stats.conversionFunnel.awaitingPayment}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -70,7 +70,7 @@ export function Dashboard() {
           </div>
           <div>
             <div className="flex justify-between mb-1">
-              <span className="text-sm font-medium text-gray-700">Paid</span>
+              <span className="text-sm font-medium text-gray-700">Оплачено</span>
               <span className="text-sm text-gray-600">{stats.conversionFunnel.paid}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -84,7 +84,7 @@ export function Dashboard() {
           </div>
           <div>
             <div className="flex justify-between mb-1">
-              <span className="text-sm font-medium text-gray-700">Completed</span>
+              <span className="text-sm font-medium text-gray-700">Завершено</span>
               <span className="text-sm text-gray-600">{stats.conversionFunnel.completed}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -101,13 +101,13 @@ export function Dashboard() {
 
       {/* Revenue by Plan */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Revenue by Plan</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Дохід за планом</h2>
         <div className="space-y-3">
           {stats.revenueByPlan.map((item) => (
             <div key={item.plan} className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700">{item.plan}</span>
               <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-600">{item.count} sales</span>
+                <span className="text-sm text-gray-600">{item.count} продажів</span>
                 <span className="text-sm font-semibold text-gray-900">${item.revenue.toFixed(2)}</span>
               </div>
             </div>

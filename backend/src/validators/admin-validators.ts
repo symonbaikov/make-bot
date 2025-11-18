@@ -6,6 +6,15 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+export const requestPasswordResetSchema = z.object({
+  email: z.string().email('Invalid email format'),
+});
+
+export const loginWithResetCodeSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  code: z.string().length(6, 'Code must be 6 digits').regex(/^\d+$/, 'Code must contain only digits'),
+});
+
 export const createSessionSchema = z.object({
   plan: z.nativeEnum(Plan, {
     errorMap: () => ({ message: 'Invalid plan' }),
@@ -38,6 +47,8 @@ export const listActionsSchema = z.object({
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchema>;
+export type LoginWithResetCodeInput = z.infer<typeof loginWithResetCodeSchema>;
 export type CreateSessionInput = z.infer<typeof createSessionSchema>;
 export type UpdateEmailInput = z.infer<typeof updateEmailSchema>;
 export type ListSessionsInput = z.infer<typeof listSessionsSchema>;

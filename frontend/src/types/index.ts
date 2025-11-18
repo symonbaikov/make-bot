@@ -14,6 +14,15 @@ export interface LoginCredentials {
   password: string;
 }
 
+export interface RequestPasswordResetCredentials {
+  email: string;
+}
+
+export interface LoginWithResetCodeCredentials {
+  email: string;
+  code: string;
+}
+
 export interface AuthUser {
   id: string;
   email: string;

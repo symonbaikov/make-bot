@@ -1,34 +1,60 @@
 # Frontend Dockerfile
+# IMPORTANT: This Dockerfile expects build context from repository root
+# Railway should use root directory as build context, not frontend/
+
 FROM node:18-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
 WORKDIR /app
 
-# Copy root package.json for workspace setup
+# Copy root package.json and lock file for workspace setup
 COPY package.json package-lock.json* ./
 
-# Copy frontend package.json
-COPY frontend/package.json ./frontend/
+# Verify root package.json exists
+RUN test -f package.json || (echo "ERROR: package.json not found! Build context must be repository root." && exit 1)
+
+# Copy all workspace package.json files (needed for workspace resolution)
+COPY backend/package.json ./backend/package.json
+COPY bot/package.json ./bot/package.json
+COPY frontend/package.json ./frontend/package.json
+
+# Verify workspace package.json files exist
+RUN test -f frontend/package.json || (echo "ERROR: frontend/package.json not found!" && exit 1)
 
 # Install all dependencies (workspace will handle it)
-RUN npm install --legacy-peer-deps
+RUN npm install --legacy-peer-deps || (echo "ERROR: npm install failed!" && exit 1)
 
 # Build stage
 FROM base AS builder
 WORKDIR /app
 
-# Copy dependencies from deps stage (workspace structure)
+# Copy root package.json and tsconfig (needed for frontend tsconfig extends)
+COPY package.json tsconfig.json ./
+
+# Verify tsconfig.json exists
+RUN test -f tsconfig.json || (echo "ERROR: tsconfig.json not found!" && exit 1)
+
+# Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy source code and configs
+# Copy frontend directory with all files (source, configs, etc.)
 COPY frontend ./frontend
-COPY package.json ./
-COPY tsconfig.json ./
+
+# Verify frontend source exists
+RUN test -d frontend/src || (echo "ERROR: frontend/src directory not found!" && exit 1)
 
 # Build frontend
 WORKDIR /app/frontend
-RUN npm run build
+ENV NODE_ENV=production
+
+# Build the application
+# Use explicit path to ensure correct resolution
+RUN npm run build || (echo "ERROR: Frontend build failed!" && exit 1)
+
+# Verify build output exists
+RUN test -d dist || (echo "ERROR: dist directory not found after build!" && ls -la && exit 1)
+RUN test -f dist/index.html || (echo "ERROR: dist/index.html not found after build!" && ls -la dist/ && exit 1)
 
 # Production stage - use nginx to serve static files
 FROM nginx:alpine AS runner

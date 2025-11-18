@@ -8,7 +8,7 @@ import { useState } from 'react';
 
 const createSessionSchema = z.object({
   plan: z.enum(['BASIC', 'STANDARD', 'PREMIUM'] as const),
-  amount: z.number().positive('Amount must be positive'),
+  amount: z.number().positive('Сума повинна бути додатньою'),
   currency: z.string().default('USD'),
 });
 
@@ -31,12 +31,12 @@ export function CreateSession() {
   const createMutation = useMutation({
     mutationFn: (data: CreateSessionFormData) => apiService.createSession(data),
     onSuccess: data => {
-      toast.success('Session created successfully!');
+      toast.success('Сесію успішно створено!');
       setCreatedLink(data.botLink);
       reset();
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to create session');
+      toast.error(error.message || 'Не вдалося створити сесію');
     },
   });
 
@@ -46,13 +46,13 @@ export function CreateSession() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">Create Session</h1>
+      <h1 className="text-3xl font-bold text-gray-900">Створити сесію</h1>
 
       <div className="bg-white rounded-lg shadow p-6 max-w-2xl">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
             <label htmlFor="plan" className="block text-sm font-medium text-gray-700 mb-1">
-              Plan
+              План
             </label>
             <select
               {...register('plan')}
@@ -67,7 +67,7 @@ export function CreateSession() {
 
           <div>
             <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
-              Amount
+              Сума
             </label>
             <input
               {...register('amount', { valueAsNumber: true })}
@@ -80,7 +80,7 @@ export function CreateSession() {
 
           <div>
             <label htmlFor="currency" className="block text-sm font-medium text-gray-700 mb-1">
-              Currency
+              Валюта
             </label>
             <input
               {...register('currency')}
@@ -97,14 +97,14 @@ export function CreateSession() {
             disabled={createMutation.isPending}
             className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {createMutation.isPending ? 'Creating...' : 'Create Session'}
+            {createMutation.isPending ? 'Створення...' : 'Створити сесію'}
           </button>
         </form>
 
         {createdLink && (
           <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
-            <h3 className="text-sm font-medium text-green-800 mb-2">Session created!</h3>
-            <p className="text-sm text-green-700 mb-2">Bot link:</p>
+            <h3 className="text-sm font-medium text-green-800 mb-2">Сесію створено!</h3>
+            <p className="text-sm text-green-700 mb-2">Посилання на бота:</p>
             <div className="flex items-center space-x-2">
               <input
                 type="text"
@@ -115,11 +115,11 @@ export function CreateSession() {
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(createdLink);
-                  toast.success('Link copied to clipboard!');
+                  toast.success('Посилання скопійовано!');
                 }}
                 className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
               >
-                Copy
+                Копіювати
               </button>
             </div>
           </div>

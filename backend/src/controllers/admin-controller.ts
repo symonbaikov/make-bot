@@ -10,6 +10,8 @@ import { sendSuccess } from '../utils/response';
 import { asyncHandler } from '../middleware/async-handler';
 import {
   LoginInput,
+  RequestPasswordResetInput,
+  LoginWithResetCodeInput,
   CreateSessionInput,
   UpdateEmailInput,
   ListSessionsInput,
@@ -27,6 +29,33 @@ export class AdminController {
     const { email, password } = req.body;
 
     const result = await webUserService.login(email, password);
+
+    sendSuccess(res, result, 200);
+  });
+
+  /**
+   * POST /api/admin/auth/forgot-password
+   * Request password reset code
+   */
+  requestPasswordReset = asyncHandler(async (req: Request<unknown, unknown, RequestPasswordResetInput>, res: Response) => {
+    const { email } = req.body;
+
+    await webUserService.requestPasswordReset(email);
+
+    // Always return success to prevent email enumeration
+    sendSuccess(res, {
+      message: 'If the email exists, a reset code has been sent',
+    }, 200);
+  });
+
+  /**
+   * POST /api/admin/auth/reset-password
+   * Login with password reset code
+   */
+  loginWithResetCode = asyncHandler(async (req: Request<unknown, unknown, LoginWithResetCodeInput>, res: Response) => {
+    const { email, code } = req.body;
+
+    const result = await webUserService.loginWithResetCode(email, code);
 
     sendSuccess(res, result, 200);
   });

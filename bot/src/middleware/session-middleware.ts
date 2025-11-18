@@ -1,5 +1,4 @@
 import { Context } from 'telegraf';
-import { SessionData } from '../types';
 
 export interface BotSession {
   sessionId?: string;
@@ -28,7 +27,7 @@ export function sessionMiddleware() {
 
   return async (ctx: BotContext, next: () => Promise<void>): Promise<void> => {
     const userId = ctx.from?.id;
-    
+
     if (!userId) {
       return next();
     }
@@ -46,4 +45,3 @@ export function sessionMiddleware() {
     await next();
   };
 }
-

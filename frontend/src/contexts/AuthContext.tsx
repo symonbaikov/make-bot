@@ -5,6 +5,7 @@ import { apiService } from '../services/api';
 interface AuthContextType {
   user: AuthUser | null;
   login: (credentials: LoginCredentials) => Promise<void>;
+  loginWithResetCode: (email: string, code: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -40,6 +41,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(response.user);
   };
 
+  const loginWithResetCode = async (email: string, code: string) => {
+    const response = await apiService.loginWithResetCode(email, code);
+    localStorage.setItem('auth_token', response.token);
+    localStorage.setItem('auth_user', JSON.stringify(response.user));
+    setUser(response.user);
+  };
+
   const logout = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
@@ -51,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         login,
+        loginWithResetCode,
         logout,
         isAuthenticated: !!user,
         isLoading,

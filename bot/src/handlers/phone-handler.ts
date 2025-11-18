@@ -8,7 +8,7 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
   try {
     if (!ctx.session) {
       await ctx.reply(
-        '❌ Please start the conversation with /start command first.'
+        '❌ Будь ласка, спочатку почніть розмову командою /start.'
       );
       return;
     }
@@ -19,14 +19,14 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
 
     if (!ctx.session.sessionId) {
       await ctx.reply(
-        '❌ Session ID is missing. Please use /start command with your session ID.'
+        '❌ Відсутній ID сесії. Будь ласка, використайте команду /start з вашим ID сесії.'
       );
       return;
     }
 
     const messageText = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
     if (!messageText) {
-      await ctx.reply('❌ Please send a valid phone number.');
+      await ctx.reply('❌ Будь ласка, надішліть валідний номер телефону.');
       return;
     }
 
@@ -35,9 +35,9 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
     // Validate phone number
     if (!isValidPhoneNumber(phoneNumber)) {
       await ctx.reply(
-        '❌ Invalid phone number format. Please provide a valid phone number.\n\n' +
-        'Examples:\n' +
-        '• +1234567890\n' +
+        '❌ Невірний формат номера телефону. Будь ласка, надайте валідний номер телефону.\n\n' +
+        'Приклади:\n' +
+        '• +380123456789\n' +
         '• +79123456789\n' +
         '• +441234567890'
       );
@@ -49,7 +49,7 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
     ctx.session.waitingForPhoneNumber = false;
 
     // Show processing message
-    await ctx.reply('⏳ Processing your information...');
+    await ctx.reply('⏳ Обробляю вашу інформацію...');
 
     // Send all data to backend API
     try {
@@ -58,7 +58,7 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
         throw new Error('Telegram user ID is missing');
       }
 
-      const result = await apiClient.sendBotWebhook({
+      await apiClient.sendBotWebhook({
         sessionId: ctx.session.sessionId,
         email: ctx.session.email!,
         tgUserId: tgUserId,
@@ -87,15 +87,15 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
       });
 
       await ctx.reply(
-        `✅ All information received and saved!\n\n` +
+        `✅ Вся інформація отримана та збережена!\n\n` +
         `📧 Email: ${ctx.session.email}\n` +
-        `👤 Name: ${ctx.session.firstName || ''} ${ctx.session.lastName || ''}\n` +
-        `📱 Phone: ${ctx.session.phoneNumber}\n` +
-        `📋 Session ID: ${ctx.session.sessionId}\n` +
-        `💰 Plan: ${ctx.session.plan}\n` +
-        `💵 Amount: $${ctx.session.amount}\n\n` +
-        `🔗 Payment Link:\n${paypalUrl}\n\n` +
-        `Please complete your payment using the link above.`
+        `👤 Ім'я: ${ctx.session.firstName || ''} ${ctx.session.lastName || ''}\n` +
+        `📱 Телефон: ${ctx.session.phoneNumber}\n` +
+        `📋 ID сесії: ${ctx.session.sessionId}\n` +
+        `💰 План: ${ctx.session.plan}\n` +
+        `💵 Сума: $${ctx.session.amount}\n\n` +
+        `🔗 Посилання на оплату:\n${paypalUrl}\n\n` +
+        `Будь ласка, завершіть оплату, використовуючи посилання вище.`
       );
 
       // Clear session after successful processing
@@ -106,9 +106,9 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
       await ctx.reply(
-        `❌ Failed to process your information.\n\n` +
-        `Error: ${errorMessage}\n\n` +
-        `Please try again or contact support.`
+        `❌ Не вдалося обробити вашу інформацію.\n\n` +
+        `Помилка: ${errorMessage}\n\n` +
+        `Будь ласка, спробуйте ще раз або зверніться до підтримки.`
       );
 
       // Reset waiting state to allow retry
@@ -117,7 +117,7 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
   } catch (error) {
     logger.error('Error in phone number handler', error);
     await ctx.reply(
-      '❌ An error occurred while processing your phone number. Please try again.'
+      '❌ Сталася помилка під час обробки вашого номера телефону. Будь ласка, спробуйте ще раз.'
     );
   }
 }

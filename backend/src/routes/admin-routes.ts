@@ -4,6 +4,8 @@ import { authMiddleware, requireRole } from '../middleware/auth';
 import { validateBody, validateQuery } from '../utils/validation';
 import {
   loginSchema,
+  requestPasswordResetSchema,
+  loginWithResetCodeSchema,
   createSessionSchema,
   updateEmailSchema,
   listSessionsSchema,
@@ -20,6 +22,22 @@ router.post(
   authLimiter,
   validateBody(loginSchema),
   adminController.login
+);
+
+// POST /api/admin/auth/forgot-password
+router.post(
+  '/auth/forgot-password',
+  authLimiter,
+  validateBody(requestPasswordResetSchema),
+  adminController.requestPasswordReset
+);
+
+// POST /api/admin/auth/reset-password
+router.post(
+  '/auth/reset-password',
+  authLimiter,
+  validateBody(loginWithResetCodeSchema),
+  adminController.loginWithResetCode
 );
 
 // All routes below require authentication
