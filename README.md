@@ -26,7 +26,10 @@ make-bot/
    npm install
    ```
 3. Copy `.env.example` to `.env` and fill in the values
-4. Setup database (see backend/README.md)
+4. Setup database:
+   - **Option A (Docker - Recommended):** `npm run db:start` then `cd backend && npm run db:migrate && npm run db:seed`
+   - **Option B (Local PostgreSQL):** `npm run db:setup-local` then `cd backend && npm run db:migrate && npm run db:seed`
+   - See [docs/DATABASE_SETUP.md](docs/DATABASE_SETUP.md) for detailed instructions
 5. Start development servers:
    ```bash
    npm run dev

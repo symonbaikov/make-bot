@@ -12,6 +12,15 @@ done
 
 echo "Database is ready!"
 
+# Generate Prisma client if not already generated
+if [ ! -d "node_modules/.prisma/client" ]; then
+  echo "Prisma client not found, generating..."
+  export PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
+  npx prisma generate || {
+    echo "Warning: Prisma generate failed, but continuing..."
+  }
+fi
+
 # Run Prisma migrations/push
 echo "Running database migrations..."
 npx prisma db push --skip-generate --accept-data-loss || {

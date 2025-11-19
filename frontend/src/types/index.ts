@@ -75,6 +75,14 @@ export interface Session {
   meta?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+  user?: {
+    id: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string;
+    tgUserId?: string;
+  };
 }
 
 export interface PaginatedResponse<T> {

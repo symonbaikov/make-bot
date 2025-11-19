@@ -2,7 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+// Sentry is initialized in utils/sentry.ts
 import { logger } from './utils/logger';
+import { initSentry } from './utils/sentry';
 import { requestLogger } from './middleware/request-logger';
 import { apiLimiter } from './middleware/rate-limiter';
 import { errorHandler } from './middleware/error-handler';
@@ -10,70 +12,250 @@ import { sendError } from './utils/response';
 
 dotenv.config();
 
-// Validate required environment variables
-const requiredEnvVars = ['JWT_SECRET', 'DATABASE_URL'];
-const missingEnvVars = requiredEnvVars.filter((varName) => !process.env[varName]);
+// Initialize Sentry BEFORE any other middleware
+initSentry();
 
-if (missingEnvVars.length > 0) {
-  logger.error('Missing required environment variables:', { missing: missingEnvVars });
-  logger.warn('Server will start but some features may not work correctly');
+// Initialize database connection early to set DATABASE_URL for Prisma
+// This allows auto-detection of Docker or local PostgreSQL
+async function initializeDatabase(): Promise<void> {
+  // Check if DATABASE_URL is set and valid
+  const hasValidDatabaseUrl = (): boolean => {
+    if (!process.env.DATABASE_URL) {
+      return false;
+    }
+
+    // Check if it's a placeholder/template string
+    const placeholderPatterns = [
+      /user:password@host:port/,
+      /user:.*@host:port/,
+      /postgresql:\/\/user:/,
+      /postgresql:\/\/.*@host:/,
+    ];
+
+    for (const pattern of placeholderPatterns) {
+      if (pattern.test(process.env.DATABASE_URL)) {
+        logger.warn('DATABASE_URL contains placeholder, will auto-detect', {
+          databaseUrl: process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@'),
+        });
+        return false;
+      }
+    }
+
+    // Validate URL format
+    try {
+      const url = new URL(process.env.DATABASE_URL);
+      if (!url.port || isNaN(parseInt(url.port))) {
+        logger.warn('DATABASE_URL has invalid port, will auto-detect', {
+          port: url.port,
+        });
+        return false;
+      }
+      // Check if hostname is not a placeholder
+      if (url.hostname === 'host' || (url.hostname === 'localhost' && url.port === 'port')) {
+        return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // Auto-detect if DATABASE_URL is not set or invalid
+  if (!hasValidDatabaseUrl() && process.env.NODE_ENV !== 'production') {
+    try {
+      logger.info('Auto-detecting database connection...');
+      const { detectDatabaseConnection } = await import('./utils/db-connection');
+      const config = await detectDatabaseConnection();
+      if (config) {
+        process.env.DATABASE_URL = config.connectionString;
+        logger.info('✅ Auto-detected database connection and set DATABASE_URL', {
+          host: config.host,
+          port: config.port,
+          database: config.database,
+        });
+      } else {
+        // Use fallback if detection fails
+        process.env.DATABASE_URL =
+          'postgresql://makebot:makebot123@127.0.0.1:5433/make_bot?schema=public';
+        logger.warn('⚠️ Database detection failed, using fallback connection (Docker PostgreSQL)');
+      }
+    } catch (error) {
+      logger.warn('⚠️ Failed to auto-detect database connection, using fallback', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      process.env.DATABASE_URL =
+        'postgresql://makebot:makebot123@127.0.0.1:5433/make_bot?schema=public';
+    }
+  }
+
+  // Final validation
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is not set and could not be auto-detected');
+  }
+
+  // Validate connection string format
+  try {
+    const url = new URL(process.env.DATABASE_URL);
+    if (!url.port || isNaN(parseInt(url.port))) {
+      throw new Error(`Invalid port in DATABASE_URL: ${url.port}`);
+    }
+    logger.info('✅ DATABASE_URL validated successfully', {
+      host: url.hostname,
+      port: url.port,
+      database: url.pathname.split('/')[1]?.split('?')[0],
+    });
+  } catch (error) {
+    logger.error('❌ Invalid DATABASE_URL format', {
+      error: error instanceof Error ? error.message : String(error),
+      databaseUrl: process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@'),
+    });
+    throw error;
+  }
 }
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+// Initialize database and start server
+(async () => {
+  try {
+    await initializeDatabase();
+    // Import Prisma after DATABASE_URL is set
+    // This ensures Prisma Client uses the correct connection string
+    await import('./utils/prisma');
+    startServer();
+  } catch (error) {
+    logger.error('Failed to start server', { error });
+    process.exit(1);
+  }
+})();
 
-// Trust proxy (for rate limiting behind reverse proxy)
-app.set('trust proxy', 1);
+function startServer() {
+  // Generate JWT_SECRET for development if not set
+  if (!process.env.JWT_SECRET) {
+    if (process.env.NODE_ENV === 'production') {
+      logger.error('❌ JWT_SECRET is required in production mode');
+      throw new Error('JWT_SECRET environment variable is required');
+    } else {
+      // Generate a random secret for development
+      const crypto = require('crypto');
+      process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex');
+      logger.warn('⚠️ JWT_SECRET not set, generated random secret for development');
+      logger.warn(
+        '⚠️ WARNING: This secret will change on each restart. Set JWT_SECRET in .env for production!'
+      );
+    }
+  }
 
-// CORS middleware (must be before helmet)
-const corsOptions = {
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Content-Type', 'Authorization'],
-};
+  // Validate required environment variables
+  const requiredEnvVars = ['DATABASE_URL'];
+  const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
-app.use(cors(corsOptions));
+  if (missingEnvVars.length > 0) {
+    logger.error('Missing required environment variables:', { missing: missingEnvVars });
+    logger.warn('Server will start but some features may not work correctly');
+  }
 
-// Security middleware (configured to work with CORS)
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' },
-  crossOriginEmbedderPolicy: false,
-}));
+  const app = express();
+  const PORT = process.env.PORT || 3000;
 
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  // Trust proxy (for rate limiting behind reverse proxy)
+  app.set('trust proxy', 1);
 
-// Request logging
-app.use(requestLogger);
+  // CORS middleware (must be before helmet)
+  const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+    : ['http://localhost:5173', 'http://localhost:3000'];
 
-// Rate limiting
-app.use('/api', apiLimiter);
+  const corsOptions = {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void
+    ) => {
+      // Allow requests with no origin (like mobile apps, Postman, or same-origin requests)
+      if (!origin) {
+        return callback(null, true);
+      }
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+      // Check if origin is in allowed list
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        // In development, allow localhost on any port
+        if (process.env.NODE_ENV !== 'production' && origin.startsWith('http://localhost:')) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Type', 'Authorization'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+  };
 
-// Routes
-import webhookRoutes from './routes/webhook-routes';
-import adminRoutes from './routes/admin-routes';
+  app.use(cors(corsOptions));
 
-app.use('/api/webhook', webhookRoutes);
-app.use('/api/admin', adminRoutes);
+  // Security middleware (configured to work with CORS)
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      crossOriginEmbedderPolicy: false,
+    })
+  );
 
-// 404 handler
-app.use((req, res) => {
-  sendError(res, 'Not found', 'NOT_FOUND', 404);
-});
+  // Body parsing middleware
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Error handling middleware (must be last)
-app.use(errorHandler);
+  // Sentry request handler (must be before other middleware)
+  // Note: Sentry handlers are set up via initSentry() in utils/sentry.ts
 
-app.listen(PORT, () => {
-  logger.info(`Server running on port ${PORT}`);
-  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+  // Request logging
+  app.use(requestLogger);
 
+  // Rate limiting
+  app.use('/api', apiLimiter);
+
+  // Health check
+  app.get('/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // Routes
+  const webhookRoutes = require('./routes/webhook-routes').default;
+  const adminRoutes = require('./routes/admin-routes').default;
+  app.use('/api/webhook', webhookRoutes);
+  app.use('/api/admin', adminRoutes);
+
+  // 404 handler
+  app.use((_req, res) => {
+    sendError(res, 'Not found', 'NOT_FOUND', 404);
+  });
+
+  // Sentry error handler is handled in error-handler middleware
+
+  // Error handling middleware (must be last)
+  app.use(errorHandler);
+
+  const server = app.listen(PORT, () => {
+    logger.info(`✅ Server running on port ${PORT}`);
+    logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.info(
+      `Database: ${process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@') || 'not set'}`
+    );
+  });
+
+  server.on('error', (error: NodeJS.ErrnoException) => {
+    if (error.code === 'EADDRINUSE') {
+      logger.error(`❌ Port ${PORT} is already in use`);
+      logger.info(`💡 Try one of these solutions:`);
+      logger.info(`   1. Stop the process using port ${PORT}: lsof -ti:${PORT} | xargs kill -9`);
+      logger.info(`   2. Use a different port: PORT=3001 npm run dev`);
+      process.exit(1);
+    } else {
+      logger.error('Server error:', { error });
+      throw error;
+    }
+  });
+}

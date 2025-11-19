@@ -117,6 +117,9 @@ export function Payments() {
                     ID сесії
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Користувач
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Email
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -141,6 +144,11 @@ export function Payments() {
                   <tr key={session.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {session.sessionId}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {session.user?.firstName || session.user?.lastName
+                        ? `${session.user.firstName || ''} ${session.user.lastName || ''}`.trim()
+                        : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {session.finalEmail || session.emailUser || session.emailPaypal || '-'}

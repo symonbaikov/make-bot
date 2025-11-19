@@ -13,53 +13,71 @@ export interface LoginResult {
 }
 
 // Direct PostgreSQL connection pool for bypassing Prisma issues
-// Parse DATABASE_URL or use fallback connection
-let pool: Pool;
+// Will be initialized asynchronously on first use
+let pool: Pool | null = null;
+let poolInitializationPromise: Promise<void> | null = null;
 
-try {
-  const dbUrl = process.env.DATABASE_URL;
-  if (dbUrl) {
-    // Parse DATABASE_URL
-    const url = new URL(dbUrl);
-    const port = url.port ? parseInt(url.port) : url.protocol === 'postgresql:' ? 5432 : 5433;
+/**
+ * Initialize database pool with auto-detection
+ */
+async function initializePool(): Promise<void> {
+  if (pool) return; // Already initialized
+
+  try {
+    const { detectDatabaseConnection } = await import('../utils/db-connection');
+    const config = await detectDatabaseConnection();
+
+    if (!config) {
+      throw new Error(
+        'No database connection available. Please ensure PostgreSQL is running:\n' +
+          '  - Docker: docker start make-bot-postgres\n' +
+          '  - Local: Check if PostgreSQL service is running on port 5432\n' +
+          '  - Or set DATABASE_URL environment variable'
+      );
+    }
+
+    // Update DATABASE_URL for Prisma if not set
+    if (!process.env.DATABASE_URL) {
+      process.env.DATABASE_URL = config.connectionString;
+    }
+
     pool = new Pool({
-      user: url.username,
-      password: url.password,
-      host: url.hostname,
-      port: port,
-      database: url.pathname.slice(1).split('?')[0], // Remove leading '/' and query params
+      host: config.host,
+      port: config.port,
+      user: config.user,
+      password: config.password,
+      database: config.database,
       connectionTimeoutMillis: 5000,
-      ssl: url.searchParams.get('sslmode') === 'require' ? { rejectUnauthorized: false } : false,
     });
-    logger.info('Database pool initialized from DATABASE_URL', {
-      host: url.hostname,
-      port: port,
-      database: url.pathname.slice(1).split('?')[0],
+
+    logger.info('Database pool initialized', {
+      host: config.host,
+      port: config.port,
+      database: config.database,
     });
-  } else {
-    // Fallback to default connection (for local development)
-    // Use port 5433 for Docker PostgreSQL (5432 is used by local PostgreSQL)
+  } catch (error) {
+    logger.error('Failed to initialize database pool', { error });
+    // Create a dummy pool that will fail gracefully
     pool = new Pool({
-      user: process.env.DB_USER || 'makebot',
-      password: process.env.DB_PASSWORD || 'makebot123',
-      host: process.env.DB_HOST || '127.0.0.1',
-      port: parseInt(process.env.DB_PORT || '5433'),
-      database: process.env.DB_NAME || 'make_bot',
-      connectionTimeoutMillis: 5000,
+      connectionString: 'invalid',
+      connectionTimeoutMillis: 1000,
     });
-    logger.info('Database pool initialized with fallback connection', {
-      host: process.env.DB_HOST || '127.0.0.1',
-      port: parseInt(process.env.DB_PORT || '5433'),
-      database: process.env.DB_NAME || 'make_bot',
-    });
+    throw error;
   }
-} catch (error) {
-  logger.error('Failed to initialize database pool', { error });
-  // Create a dummy pool that will fail gracefully
-  pool = new Pool({
-    connectionString: 'invalid',
-    connectionTimeoutMillis: 1000,
-  });
+}
+
+/**
+ * Get database pool, initializing if needed
+ */
+async function getPool(): Promise<Pool> {
+  if (!poolInitializationPromise) {
+    poolInitializationPromise = initializePool();
+  }
+  await poolInitializationPromise;
+  if (!pool) {
+    throw new Error('Database pool initialization failed');
+  }
+  return pool;
 }
 
 export class WebUserService {
@@ -70,7 +88,8 @@ export class WebUserService {
       });
     } catch (error) {
       // Fallback to direct SQL if Prisma fails
-      const result = await pool.query('SELECT * FROM web_users WHERE email = $1', [email]);
+      const dbPool = await getPool();
+      const result = await dbPool.query('SELECT * FROM web_users WHERE email = $1', [email]);
       if (result.rows.length === 0) return null;
       const row = result.rows[0];
       return {
@@ -134,10 +153,11 @@ export class WebUserService {
       logger.debug('Prisma query successful', { email, found: !!user });
     } catch (prismaError: any) {
       const prismaErrorMessage = prismaError.message || String(prismaError);
-      const isConnectionError = prismaErrorMessage.includes('Can\'t reach database server') ||
-                                 prismaErrorMessage.includes('ECONNREFUSED') ||
-                                 prismaErrorMessage.includes('connection');
-      
+      const isConnectionError =
+        prismaErrorMessage.includes("Can't reach database server") ||
+        prismaErrorMessage.includes('ECONNREFUSED') ||
+        prismaErrorMessage.includes('connection');
+
       logger.warn('Prisma query failed, trying direct SQL', {
         error: prismaErrorMessage,
         stack: prismaError.stack,
@@ -148,7 +168,8 @@ export class WebUserService {
       // Fallback to direct SQL query
       try {
         logger.debug('Attempting direct SQL query', { email });
-        const result = await pool.query(
+        const dbPool = await getPool();
+        const result = await dbPool.query(
           'SELECT id, email, password_hash, role, first_name, last_name, created_at, updated_at FROM web_users WHERE email = $1 LIMIT 1',
           [email]
         );
@@ -172,20 +193,34 @@ export class WebUserService {
           };
         }
       } catch (sqlError: any) {
-        const errorMessage = sqlError.code === 'ECONNREFUSED' 
-          ? `Database connection refused. Please ensure PostgreSQL is running on ${pool['options']?.host || 'localhost'}:${pool['options']?.port || 5433}. If using Docker, run: docker start make-bot-postgres`
-          : `Database connection failed: ${sqlError.message}`;
-        
-        logger.error('Direct SQL query also failed', { 
+        const dbPool = await getPool().catch(() => null);
+        const poolHost = dbPool?.['options']?.host || 'localhost';
+        const poolPort = dbPool?.['options']?.port || 5433;
+
+        let errorMessage: string;
+        if (sqlError.code === 'ECONNREFUSED') {
+          errorMessage = `Database connection refused. Please ensure PostgreSQL is running on ${poolHost}:${poolPort}. `;
+          if (poolPort === 5433) {
+            errorMessage += 'If using Docker, run: docker start make-bot-postgres';
+          } else {
+            errorMessage += 'Check if PostgreSQL service is running.';
+          }
+        } else {
+          errorMessage = `Database connection failed: ${sqlError.message}`;
+        }
+
+        logger.error('Direct SQL query also failed', {
           error: sqlError.message,
           code: sqlError.code,
           stack: sqlError.stack,
           poolConfig: {
-            host: pool['options']?.host,
-            port: pool['options']?.port,
-            database: pool['options']?.database,
+            host: poolHost,
+            port: poolPort,
+            database: dbPool?.['options']?.database || 'unknown',
           },
         });
+
+        // Throw AppError instead of generic Error for better error handling
         throw new Error(errorMessage);
       }
     }

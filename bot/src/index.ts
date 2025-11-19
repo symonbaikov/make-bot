@@ -9,8 +9,12 @@ import { handleHelp } from './handlers/help-handler';
 import { handleError } from './handlers/error-handler';
 import { logger } from './utils/logger';
 import { apiClient } from './utils/api-client';
+import { initSentry } from './utils/sentry';
 
 dotenv.config();
+
+// Initialize Sentry BEFORE bot initialization
+initSentry();
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 

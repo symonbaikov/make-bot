@@ -1,17 +1,40 @@
 import axios, { AxiosError } from 'axios';
-import { ApiResponse, LoginCredentials, LoginResponse, Session, PaginatedResponse, ListSessionsParams, Action, ListActionsParams, Stats, CreateSessionInput } from '../types';
+import {
+  ApiResponse,
+  LoginCredentials,
+  LoginResponse,
+  Session,
+  PaginatedResponse,
+  ListSessionsParams,
+  Action,
+  ListActionsParams,
+  Stats,
+  CreateSessionInput,
+} from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Use relative path in development (via Vite proxy) or absolute URL in production
+// In dev mode, ALWAYS use empty string to use Vite proxy (ignore VITE_API_URL in dev)
+// In production, use VITE_API_URL or default
+const isDev = import.meta.env.DEV || import.meta.env.MODE === 'development';
+const API_URL = isDev
+  ? '' // Always use Vite proxy in dev mode
+  : import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+// Log API URL for debugging
+if (isDev) {
+  console.log('API URL:', API_URL || '(using Vite proxy)');
+}
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Important for CORS with credentials
 });
 
 // Add auth token to requests
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(config => {
   const token = localStorage.getItem('auth_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -21,7 +44,7 @@ api.interceptors.request.use((config) => {
 
 // Handle auth errors
 api.interceptors.response.use(
-  (response) => response,
+  response => response,
   (error: AxiosError<ApiResponse>) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('auth_token');
@@ -36,7 +59,10 @@ export const apiService = {
   // Auth
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     try {
-      const response = await api.post<ApiResponse<LoginResponse>>('/api/admin/auth/login', credentials);
+      const response = await api.post<ApiResponse<LoginResponse>>(
+        '/api/admin/auth/login',
+        credentials
+      );
       if (!response.data.success || !response.data.data) {
         throw new Error(response.data.error?.message || 'Login failed');
       }
@@ -44,7 +70,8 @@ export const apiService = {
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError<ApiResponse>;
-        const errorMessage = axiosError.response?.data?.error?.message || axiosError.message || 'Login failed';
+        const errorMessage =
+          axiosError.response?.data?.error?.message || axiosError.message || 'Login failed';
         throw new Error(errorMessage);
       }
       throw error;
@@ -53,14 +80,20 @@ export const apiService = {
 
   async requestPasswordReset(email: string): Promise<void> {
     try {
-      const response = await api.post<ApiResponse<{ message: string }>>('/api/admin/auth/forgot-password', { email });
+      const response = await api.post<ApiResponse<{ message: string }>>(
+        '/api/admin/auth/forgot-password',
+        { email }
+      );
       if (!response.data.success) {
         throw new Error(response.data.error?.message || 'Failed to request password reset');
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError<ApiResponse>;
-        const errorMessage = axiosError.response?.data?.error?.message || axiosError.message || 'Failed to request password reset';
+        const errorMessage =
+          axiosError.response?.data?.error?.message ||
+          axiosError.message ||
+          'Failed to request password reset';
         throw new Error(errorMessage);
       }
       throw error;
@@ -69,7 +102,10 @@ export const apiService = {
 
   async loginWithResetCode(email: string, code: string): Promise<LoginResponse> {
     try {
-      const response = await api.post<ApiResponse<LoginResponse>>('/api/admin/auth/reset-password', { email, code });
+      const response = await api.post<ApiResponse<LoginResponse>>(
+        '/api/admin/auth/reset-password',
+        { email, code }
+      );
       if (!response.data.success || !response.data.data) {
         throw new Error(response.data.error?.message || 'Invalid or expired code');
       }
@@ -77,7 +113,10 @@ export const apiService = {
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError<ApiResponse>;
-        const errorMessage = axiosError.response?.data?.error?.message || axiosError.message || 'Invalid or expired code';
+        const errorMessage =
+          axiosError.response?.data?.error?.message ||
+          axiosError.message ||
+          'Invalid or expired code';
         throw new Error(errorMessage);
       }
       throw error;
@@ -86,7 +125,9 @@ export const apiService = {
 
   // Sessions/Payments
   async getSessions(params: ListSessionsParams = {}): Promise<PaginatedResponse<Session>> {
-    const response = await api.get<ApiResponse<PaginatedResponse<Session>>>('/api/admin/payments', { params });
+    const response = await api.get<ApiResponse<PaginatedResponse<Session>>>('/api/admin/payments', {
+      params,
+    });
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error?.message || 'Failed to fetch sessions');
     }
@@ -102,7 +143,9 @@ export const apiService = {
   },
 
   async updateEmail(id: string, email: string): Promise<Session> {
-    const response = await api.put<ApiResponse<Session>>(`/api/admin/payments/${id}/email`, { email });
+    const response = await api.put<ApiResponse<Session>>(`/api/admin/payments/${id}/email`, {
+      email,
+    });
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error?.message || 'Failed to update email');
     }
@@ -125,7 +168,10 @@ export const apiService = {
   },
 
   async createSession(data: CreateSessionInput): Promise<Session & { botLink: string }> {
-    const response = await api.post<ApiResponse<Session & { botLink: string }>>('/api/admin/sessions', data);
+    const response = await api.post<ApiResponse<Session & { botLink: string }>>(
+      '/api/admin/sessions',
+      data
+    );
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error?.message || 'Failed to create session');
     }
@@ -134,7 +180,9 @@ export const apiService = {
 
   // Actions
   async getActions(params: ListActionsParams = {}): Promise<PaginatedResponse<Action>> {
-    const response = await api.get<ApiResponse<PaginatedResponse<Action>>>('/api/admin/actions', { params });
+    const response = await api.get<ApiResponse<PaginatedResponse<Action>>>('/api/admin/actions', {
+      params,
+    });
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error?.message || 'Failed to fetch actions');
     }
@@ -152,4 +200,3 @@ export const apiService = {
 };
 
 export default api;
-
