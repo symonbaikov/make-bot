@@ -27,6 +27,11 @@ export const updateEmailSchema = z.object({
   email: z.string().email('Invalid email format'),
 });
 
+export const sendEmailSchema = z.object({
+  subject: z.string().min(1, 'Subject is required').max(200, 'Subject is too long'),
+  body: z.string().min(1, 'Body is required').max(10000, 'Body is too long'),
+});
+
 export const listSessionsSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
@@ -51,6 +56,7 @@ export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchem
 export type LoginWithResetCodeInput = z.infer<typeof loginWithResetCodeSchema>;
 export type CreateSessionInput = z.infer<typeof createSessionSchema>;
 export type UpdateEmailInput = z.infer<typeof updateEmailSchema>;
+export type SendEmailInput = z.infer<typeof sendEmailSchema>;
 export type ListSessionsInput = z.infer<typeof listSessionsSchema>;
 export type ListActionsInput = z.infer<typeof listActionsSchema>;
 

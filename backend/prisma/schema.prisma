@@ -3,7 +3,7 @@
 
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["linux-musl-openssl-3.0.x"]
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -36,6 +36,7 @@ enum ActionType {
   EMAIL_RESENT
   EMAIL_UPDATED
   ACCESS_MANUALLY_GRANTED
+  EMAIL_SENT_ADMIN
   WEBHOOK_SENT
   WEBHOOK_FAILED
 }

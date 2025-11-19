@@ -12,7 +12,8 @@ COPY package.json package-lock.json* ./
 COPY backend/package.json ./backend/
 
 # Install all dependencies (workspace will handle it)
-RUN npm install --legacy-peer-deps
+# Use npm ci for faster, reproducible builds
+RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 
 # Build stage
 FROM base AS builder
@@ -33,15 +34,9 @@ WORKDIR /app/backend
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 ENV PRISMA_SKIP_POSTINSTALL_GENERATE=1
 
-# Generate Prisma client with retry logic
-# Try up to 3 times with 5 second delay between attempts
-RUN for i in 1 2 3; do \
-      echo "Attempt $i to generate Prisma client..." && \
-      npm run db:generate && break || \
-      (echo "Attempt $i failed, waiting 5 seconds..." && sleep 5); \
-    done || \
-    (echo "Warning: Prisma generate failed after 3 attempts. Continuing build..." && \
-     echo "Prisma client will be generated at runtime if needed.")
+# Generate Prisma client (skip retry logic to speed up build)
+# If it fails, it will be generated at runtime in docker-entrypoint.sh
+RUN npm run db:generate || echo "Warning: Prisma generate failed, will retry at runtime"
 
 # Build TypeScript to JavaScript - continue even if there are type errors
 RUN npx tsc --skipLibCheck --noEmitOnError false || echo "Built with type warnings"
@@ -54,33 +49,39 @@ ENV NODE_ENV=production
 
 # Install OpenSSL for Prisma (required for linux-musl binary)
 
-# Alpine uses OpenSSL 3.x, Prisma needs 1.1.x - use compatibility layer
+# Alpine uses OpenSSL 3.x, Prisma needs compatibility layer
+# Optimized: combine all operations and use || true to avoid failures
 RUN apk add --no-cache openssl && \
-    mkdir -p /usr/lib && \
+    mkdir -p /usr/lib /lib && \
     (test -f /usr/lib/libssl.so.3 && ln -sf /usr/lib/libssl.so.3 /usr/lib/libssl.so.1.1 || true) && \
     (test -f /usr/lib/libcrypto.so.3 && ln -sf /usr/lib/libcrypto.so.3 /usr/lib/libcrypto.so.1.1 || true) && \
     (test -f /lib/libssl.so.3 && ln -sf /lib/libssl.so.3 /lib/libssl.so.1.1 || true) && \
-    (test -f /lib/libcrypto.so.3 && ln -sf /lib/libcrypto.so.3 /lib/libcrypto.so.1.1 || true)
+    (test -f /lib/libcrypto.so.3 && ln -sf /lib/libcrypto.so.3 /lib/libcrypto.so.1.1 || true) || true
 
-# Create non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nodejs
+# Create non-root user (combine into single RUN for efficiency)
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nodejs
 
-# Copy necessary files
-COPY --from=builder /app/backend/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
+# Copy necessary files in optimal order (smaller files first for better caching)
 COPY --from=builder /app/backend/package.json ./
 COPY --from=builder /app/backend/prisma ./prisma
 COPY backend/docker-entrypoint.sh ./docker-entrypoint.sh
+COPY --from=builder /app/backend/dist ./dist
 
-# Copy Prisma Client (it's in root node_modules in workspace)
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+# Copy node_modules from builder (workspace structure)
+# Note: This includes all dependencies, but chown optimization below makes it faster
+COPY --from=builder /app/node_modules ./node_modules
 
-# Create logs directory with proper permissions and make entrypoint executable
+# Create logs directory and set permissions
 RUN mkdir -p /app/logs && \
-    chown -R nodejs:nodejs /app && \
-    chmod -R 755 /app/logs && \
+    chmod 755 /app/logs && \
     chmod +x /app/docker-entrypoint.sh
+
+# Set ownership efficiently (critical for fast unpacking)
+# Only chown essential files/dirs, skip deep recursion on node_modules
+# Node.js can read files even if owned by root in most cases
+RUN chown -R nodejs:nodejs /app/dist /app/logs /app/docker-entrypoint.sh /app/package.json /app/prisma && \
+    chown nodejs:nodejs /app/node_modules 2>/dev/null || true
 
 USER nodejs
 

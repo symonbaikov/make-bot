@@ -61,7 +61,14 @@ async function initializeDatabase(): Promise<void> {
   };
 
   // Auto-detect if DATABASE_URL is not set or invalid
-  if (!hasValidDatabaseUrl() && process.env.NODE_ENV !== 'production') {
+  if (!hasValidDatabaseUrl()) {
+    if (process.env.NODE_ENV === 'production') {
+      // In production, DATABASE_URL must be set
+      throw new Error(
+        'DATABASE_URL is required in production mode. Please set the DATABASE_URL environment variable.'
+      );
+    }
+    
     try {
       logger.info('Auto-detecting database connection...');
       const { detectDatabaseConnection } = await import('./utils/db-connection');
@@ -74,17 +81,25 @@ async function initializeDatabase(): Promise<void> {
           database: config.database,
         });
       } else {
-        // Use fallback if detection fails
+        // Use fallback if detection fails (only in development)
         process.env.DATABASE_URL =
           'postgresql://makebot:makebot123@127.0.0.1:5433/make_bot?schema=public';
         logger.warn('⚠️ Database detection failed, using fallback connection (Docker PostgreSQL)');
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.warn('⚠️ Failed to auto-detect database connection, using fallback', {
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
       });
-      process.env.DATABASE_URL =
-        'postgresql://makebot:makebot123@127.0.0.1:5433/make_bot?schema=public';
+      // Only use fallback in development
+      if (process.env.NODE_ENV !== 'production') {
+        process.env.DATABASE_URL =
+          'postgresql://makebot:makebot123@127.0.0.1:5433/make_bot?schema=public';
+      } else {
+        throw new Error(
+          `Failed to auto-detect database connection: ${errorMessage}. DATABASE_URL must be set in production.`
+        );
+      }
     }
   }
 
@@ -122,7 +137,16 @@ async function initializeDatabase(): Promise<void> {
     await import('./utils/prisma');
     startServer();
   } catch (error) {
-    logger.error('Failed to start server', { error });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    logger.error('Failed to start server', {
+      error: errorMessage,
+      stack: errorStack,
+      errorType: error?.constructor?.name || typeof error,
+      nodeEnv: process.env.NODE_ENV,
+      databaseUrl: process.env.DATABASE_URL ? 'set' : 'not set',
+    });
+    console.error('Fatal error:', error);
     process.exit(1);
   }
 })();

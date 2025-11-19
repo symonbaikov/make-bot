@@ -106,9 +106,28 @@ export class EmailService {
       text,
     });
   }
+
+  /**
+   * Send custom email to user from admin panel
+   */
+  async sendEmailToUser(email: string, subject: string, body: string): Promise<void> {
+    // Convert plain text body to HTML, preserving line breaks
+    const html = body
+      .split('\n')
+      .map((line) => `<p>${line || '&nbsp;'}</p>`)
+      .join('');
+
+    await this.sendEmail({
+      to: email,
+      subject,
+      html,
+      text: body,
+    });
+  }
 }
 
 export const emailService = new EmailService();
+
 
 
 

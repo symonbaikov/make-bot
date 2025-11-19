@@ -6,6 +6,7 @@ import { actionService } from '../services/action-service';
 import { makeService } from '../services/make-service';
 import { statsService } from '../services/stats-service';
 import { exportService } from '../services/export-service';
+import { emailService } from '../services/email-service';
 import { sendSuccess } from '../utils/response';
 import { asyncHandler } from '../middleware/async-handler';
 import {
@@ -14,6 +15,7 @@ import {
   LoginWithResetCodeInput,
   CreateSessionInput,
   UpdateEmailInput,
+  SendEmailInput,
   ListSessionsInput,
   ListActionsInput,
 } from '../validators/admin-validators';
@@ -170,6 +172,51 @@ export class AdminController {
     sendSuccess(res, {
       message: 'Email updated successfully',
       session: updatedSession,
+    });
+  });
+
+  /**
+   * POST /api/admin/payments/:id/send-email
+   * Send custom email to user
+   */
+  sendEmail = asyncHandler(async (
+    req: AuthRequest<{ id: string }, unknown, SendEmailInput>,
+    res: Response
+  ) => {
+    const { id } = req.params;
+    const { subject, body } = req.body;
+
+    const session = await sessionService.findBySessionId(id) || await sessionService.findById(id);
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    const finalEmail = sessionService.getFinalEmail(session);
+    if (!finalEmail) {
+      throw new Error('No email available for this session');
+    }
+
+    // Send email
+    await emailService.sendEmailToUser(finalEmail, subject, body);
+
+    // Log action
+    await actionService.create({
+      type: ActionType.EMAIL_SENT_ADMIN,
+      ref: session.sessionId,
+      sessionId: session.id,
+      payload: {
+        email: finalEmail,
+        subject,
+        adminId: req.user?.id,
+        adminEmail: req.user?.email,
+      },
+    });
+
+    sendSuccess(res, {
+      message: 'Email sent successfully',
+      sessionId: session.sessionId,
+      email: finalEmail,
+      subject,
     });
   });
 

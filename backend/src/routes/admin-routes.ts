@@ -8,6 +8,7 @@ import {
   loginWithResetCodeSchema,
   createSessionSchema,
   updateEmailSchema,
+  sendEmailSchema,
   listSessionsSchema,
   listActionsSchema,
 } from '../validators/admin-validators';
@@ -61,6 +62,13 @@ router.put(
   '/payments/:id/email',
   validateBody(updateEmailSchema),
   adminController.updateEmail
+);
+
+// POST /api/admin/payments/:id/send-email
+router.post(
+  '/payments/:id/send-email',
+  validateBody(sendEmailSchema),
+  adminController.sendEmail
 );
 
 // POST /api/admin/payments/:id/grant-access
