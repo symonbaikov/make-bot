@@ -48,6 +48,10 @@ RUN test -d frontend/src || (echo "ERROR: frontend/src directory not found!" && 
 WORKDIR /app/frontend
 ENV NODE_ENV=production
 
+# Accept build args for API URL (empty = use relative path via nginx proxy)
+ARG VITE_API_URL=
+ENV VITE_API_URL=${VITE_API_URL}
+
 # Build the application
 # Use explicit path to ensure correct resolution
 RUN npm run build || (echo "ERROR: Frontend build failed!" && exit 1)
@@ -62,7 +66,7 @@ FROM nginx:alpine AS runner
 # Copy built files from builder
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 
-# Create nginx configuration for SPA routing
+# Create nginx configuration for SPA routing and API proxying
 RUN echo 'server { \
     listen 80; \
     server_name _; \
@@ -75,9 +79,17 @@ RUN echo 'server { \
     gzip_min_length 1024; \
     gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json; \
     \
-    # SPA routing - all routes go to index.html \
-    location / { \
-        try_files $uri $uri/ /index.html; \
+    # Proxy API requests to backend (backend already has /api prefix) \
+    location /api { \
+        proxy_pass http://backend:3000; \
+        proxy_http_version 1.1; \
+        proxy_set_header Upgrade $http_upgrade; \
+        proxy_set_header Connection "upgrade"; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+        proxy_set_header X-Forwarded-Proto $scheme; \
+        proxy_cache_bypass $http_upgrade; \
     } \
     \
     # Health check endpoint \
@@ -85,6 +97,11 @@ RUN echo 'server { \
         access_log off; \
         return 200 "healthy\n"; \
         add_header Content-Type text/plain; \
+    } \
+    \
+    # SPA routing - all routes go to index.html \
+    location / { \
+        try_files $uri $uri/ /index.html; \
     } \
     \
     # Cache static assets \

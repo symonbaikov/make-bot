@@ -14,11 +14,12 @@ import {
 
 // Use relative path in development (via Vite proxy) or absolute URL in production
 // In dev mode, ALWAYS use empty string to use Vite proxy (ignore VITE_API_URL in dev)
-// In production, use VITE_API_URL or default
+// In production, use relative path (nginx proxy) or VITE_API_URL if set
 const isDev = import.meta.env.DEV || import.meta.env.MODE === 'development';
+// In production Docker, nginx proxies /api to backend, so use empty string (relative path)
 const API_URL = isDev
   ? '' // Always use Vite proxy in dev mode
-  : import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  : import.meta.env.VITE_API_URL || ''; // Use relative path in production (nginx proxy)
 
 // Log API URL for debugging
 if (isDev) {
@@ -165,6 +166,16 @@ export const apiService = {
       throw new Error(response.data.error?.message || 'Failed to grant access');
     }
     return response.data.data;
+  },
+
+  async sendEmail(id: string, subject: string, body: string): Promise<void> {
+    const response = await api.post<ApiResponse>(`/api/admin/payments/${id}/send-email`, {
+      subject,
+      body,
+    });
+    if (!response.data.success) {
+      throw new Error(response.data.error?.message || 'Failed to send email');
+    }
   },
 
   async createSession(data: CreateSessionInput): Promise<Session & { botLink: string }> {

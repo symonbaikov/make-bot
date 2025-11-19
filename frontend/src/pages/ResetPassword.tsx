@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../contexts/AuthContext';
-import { apiService } from '../services/api';
 import { toast } from 'react-toastify';
 
 const resetPasswordSchema = z.object({

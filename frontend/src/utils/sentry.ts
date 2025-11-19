@@ -41,7 +41,7 @@ export function initSentry(): void {
       'Failed to fetch',
       'Network request failed',
     ],
-    beforeSend(event, hint) {
+    beforeSend(event, _hint) {
       // Filter out sensitive data
       if (event.request) {
         // Remove sensitive headers

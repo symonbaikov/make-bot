@@ -6,6 +6,7 @@ import { ListSessionsParams, SessionStatus, SessionStatusValues, PlanValues } fr
 import { Loading } from '../components/Loading';
 import { Error } from '../components/Error';
 import { EmptyState } from '../components/EmptyState';
+import { SendEmailModal } from '../components/SendEmailModal';
 import { format } from 'date-fns';
 
 export function Payments() {
@@ -13,6 +14,11 @@ export function Payments() {
     page: 1,
     limit: 20,
   });
+  const [selectedSession, setSelectedSession] = useState<{
+    sessionId: string;
+    email: string;
+    userName?: string;
+  } | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['sessions', params],
@@ -20,11 +26,11 @@ export function Payments() {
   });
 
   const handleFilterChange = (key: keyof ListSessionsParams, value: unknown) => {
-    setParams((prev) => ({ ...prev, [key]: value, page: 1 }));
+    setParams(prev => ({ ...prev, [key]: value, page: 1 }));
   };
 
   const handlePageChange = (page: number) => {
-    setParams((prev) => ({ ...prev, page }));
+    setParams(prev => ({ ...prev, page }));
   };
 
   const getStatusColor = (status: SessionStatus) => {
@@ -41,7 +47,13 @@ export function Payments() {
   };
 
   if (isLoading) return <Loading />;
-  if (error) return <Error message={error instanceof Error ? error.message : 'Не вдалося завантажити платежі'} onRetry={() => refetch()} />;
+  if (error)
+    return (
+      <Error
+        message={error instanceof Error ? error.message : 'Не вдалося завантажити платежі'}
+        onRetry={() => refetch()}
+      />
+    );
 
   return (
     <div className="space-y-6">
@@ -56,11 +68,11 @@ export function Payments() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Статус</label>
             <select
               value={params.status || ''}
-              onChange={(e) => handleFilterChange('status', e.target.value || undefined)}
+              onChange={e => handleFilterChange('status', e.target.value || undefined)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Всі</option>
-              {SessionStatusValues.map((status) => (
+              {SessionStatusValues.map(status => (
                 <option key={status} value={status}>
                   {status}
                 </option>
@@ -71,11 +83,11 @@ export function Payments() {
             <label className="block text-sm font-medium text-gray-700 mb-1">План</label>
             <select
               value={params.plan || ''}
-              onChange={(e) => handleFilterChange('plan', e.target.value || undefined)}
+              onChange={e => handleFilterChange('plan', e.target.value || undefined)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Всі</option>
-              {PlanValues.map((plan) => (
+              {PlanValues.map(plan => (
                 <option key={plan} value={plan}>
                   {plan}
                 </option>
@@ -88,7 +100,7 @@ export function Payments() {
               type="text"
               placeholder="ID сесії, Email, ID транзакції..."
               value={params.search || ''}
-              onChange={(e) => handleFilterChange('search', e.target.value || undefined)}
+              onChange={e => handleFilterChange('search', e.target.value || undefined)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
@@ -97,7 +109,7 @@ export function Payments() {
             <input
               type="date"
               value={params.startDate || ''}
-              onChange={(e) => handleFilterChange('startDate', e.target.value || undefined)}
+              onChange={e => handleFilterChange('startDate', e.target.value || undefined)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
@@ -140,7 +152,7 @@ export function Payments() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {data?.data.map((session) => (
+                {data?.data.map(session => (
                   <tr key={session.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {session.sessionId}
@@ -153,12 +165,16 @@ export function Payments() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {session.finalEmail || session.emailUser || session.emailPaypal || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{session.plan}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {session.plan}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       ${session.amount} {session.currency}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(session.status)}`}>
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(session.status)}`}
+                      >
                         {session.status}
                       </span>
                     </td>
@@ -166,12 +182,50 @@ export function Payments() {
                       {format(new Date(session.createdAt), 'MMM dd, yyyy')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Link
-                        to={`/payments/${session.sessionId}`}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        Переглянути
-                      </Link>
+                      <div className="flex items-center space-x-3">
+                        {(session.finalEmail || session.emailUser || session.emailPaypal) && (
+                          <button
+                            onClick={() => {
+                              const finalEmail =
+                                session.finalEmail ||
+                                session.emailUser ||
+                                session.emailPaypal ||
+                                '';
+                              const userName =
+                                session.user?.firstName || session.user?.lastName
+                                  ? `${session.user.firstName || ''} ${session.user.lastName || ''}`.trim()
+                                  : undefined;
+                              setSelectedSession({
+                                sessionId: session.sessionId,
+                                email: finalEmail,
+                                userName,
+                              });
+                            }}
+                            className="text-blue-600 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                            title="Відправити email"
+                          >
+                            <svg
+                              className="h-5 w-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </button>
+                        )}
+                        <Link
+                          to={`/payments/${session.sessionId}`}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          Переглянути
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -183,7 +237,8 @@ export function Payments() {
           {data && data.totalPages > 1 && (
             <div className="flex items-center justify-between bg-white px-4 py-3 rounded-lg shadow">
               <div className="text-sm text-gray-700">
-                Показано {((data.page - 1) * data.limit) + 1} до {Math.min(data.page * data.limit, data.total)} з {data.total} результатів
+                Показано {(data.page - 1) * data.limit + 1} до{' '}
+                {Math.min(data.page * data.limit, data.total)} з {data.total} результатів
               </div>
               <div className="flex space-x-2">
                 <button
@@ -205,7 +260,17 @@ export function Payments() {
           )}
         </>
       )}
+
+      {/* Send Email Modal */}
+      {selectedSession && (
+        <SendEmailModal
+          isOpen={!!selectedSession}
+          onClose={() => setSelectedSession(null)}
+          sessionId={selectedSession.sessionId}
+          userEmail={selectedSession.email}
+          userName={selectedSession.userName}
+        />
+      )}
     </div>
   );
 }
-

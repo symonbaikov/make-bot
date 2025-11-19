@@ -21,7 +21,7 @@ export function initSentry(): void {
     tracesSampleRate: environment === 'production' ? 0.1 : 1.0,
     // Filter out common errors
     ignoreErrors: ['ECONNRESET', 'ECONNREFUSED'],
-    beforeSend(event, hint) {
+    beforeSend(event, _hint) {
       // Filter out sensitive data
       if (event.request) {
         // Remove sensitive headers

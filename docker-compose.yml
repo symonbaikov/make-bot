@@ -7,11 +7,11 @@ services:
       POSTGRES_PASSWORD: makebot123
       POSTGRES_DB: make_bot
     ports:
-      - "5433:5432"
+      - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U makebot"]
+      test: ['CMD-SHELL', 'pg_isready -U makebot']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,14 +24,14 @@ services:
       dockerfile: backend/Dockerfile
     container_name: make-bot-backend
     ports:
-      - "3100:3000"
+      - '3100:3000'
     environment:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_URL=postgresql://makebot:makebot123@postgres:5432/make_bot?schema=public
       - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
-      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5174,http://127.0.0.1:5174}
       - MAKE_WEBHOOK_URL=${MAKE_WEBHOOK_URL:-https://hook.us1.make.com/your-webhook-url}
       - TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME:-your_bot_username}
       - LOG_LEVEL=${LOG_LEVEL:-info}
@@ -39,7 +39,13 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -54,7 +60,7 @@ services:
       dockerfile: bot/Dockerfile
     container_name: make-bot-bot
     ports:
-      - "3101:3001"
+      - '3101:3001'
     environment:
       - NODE_ENV=production
       - PORT=3001
@@ -75,7 +81,10 @@ services:
       dockerfile: frontend/Dockerfile
     container_name: make-bot-frontend
     ports:
-      - "5174:80"
+      - '5174:80'
+    depends_on:
+      backend:
+        condition: service_healthy
     networks:
       - make-bot-network
     restart: unless-stopped
@@ -86,4 +95,3 @@ volumes:
 networks:
   make-bot-network:
     driver: bridge
-
