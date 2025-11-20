@@ -43,7 +43,7 @@ TELEGRAM_BOT_USERNAME=your_bot_username
 3. В настройках укажите:
    - **Root Directory:** `bot`
    - **Dockerfile Path:** `bot/Dockerfile`
-4. Настройте переменные окружения:
+4. Настройте переменные окружения **СРАЗУ** (до первого деплоя):
 
 ```
 NODE_ENV=production
@@ -53,14 +53,37 @@ PORT=3001
 ```
 
 5. Railway задеплоит Bot
-6. Получите публичный URL для Bot (например: `https://your-bot.railway.app`)
-7. **ВАЖНО:** Добавьте переменную окружения `TELEGRAM_WEBHOOK_URL`:
+6. **Получите публичный URL для Bot:**
+
+   **Способ 1: Через вкладку Networking (рекомендуется)**
+   - Откройте Bot сервис в Railway
+   - Перейдите на вкладку **Networking** (или **Settings** → **Networking**)
+   - Найдите раздел **Public Domain**
+   - Если домена нет, нажмите **Generate Domain** или **+ New**
+   - Скопируйте URL (например: `https://bot-production.up.railway.app`)
+
+   **Способ 2: Через Settings**
+   - Откройте Bot сервис в Railway
+   - Перейдите в **Settings** → **Networking**
+   - Найдите **Public Domain** или **Custom Domain**
+   - Скопируйте URL
+
+   **Способ 3: Через Variables (если Railway автоматически создал)**
+   - Откройте Bot сервис → **Variables**
+   - Найдите переменную типа `RAILWAY_PUBLIC_DOMAIN` или `PUBLIC_URL`
+   - Используйте это значение
+
+7. **КРИТИЧЕСКИ ВАЖНО:** Добавьте переменную окружения `TELEGRAM_WEBHOOK_URL`:
 
 ```
 TELEGRAM_WEBHOOK_URL=https://your-bot.railway.app/webhook
 ```
 
-Это переключит бота в webhook режим и предотвратит конфликты при нескольких экземплярах.
+**⚠️ БЕЗ ЭТОЙ ПЕРЕМЕННОЙ БОТ НЕ ЗАПУСТИТСЯ В PRODUCTION!**
+
+Это переключит бота в webhook режим и предотвратит конфликты при нескольких экземплярах (ошибка 409 Conflict).
+
+**Примечание:** После добавления `TELEGRAM_WEBHOOK_URL` Railway автоматически перезапустит бота в webhook режиме.
 
 ### 5. Задеплоить Frontend на Vercel
 

@@ -20,10 +20,21 @@ initSentry();
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_URL = process.env.TELEGRAM_WEBHOOK_URL;
 const PORT = process.env.PORT || 3001;
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const IS_PRODUCTION = NODE_ENV === 'production';
 const USE_WEBHOOK = !!WEBHOOK_URL;
 
 if (!BOT_TOKEN) {
   logger.error('TELEGRAM_BOT_TOKEN is not set in environment variables');
+  process.exit(1);
+}
+
+// In production, webhook is required
+if (IS_PRODUCTION && !WEBHOOK_URL) {
+  logger.error(
+    'TELEGRAM_WEBHOOK_URL is required in production environment. ' +
+      'Please set TELEGRAM_WEBHOOK_URL environment variable.'
+  );
   process.exit(1);
 }
 
@@ -101,6 +112,14 @@ async function startBot() {
       app.listen(PORT, async () => {
         logger.info(`Webhook server listening on port ${PORT}`);
 
+        // Delete existing webhook first to avoid conflicts, then set new one
+        try {
+          await bot.telegram.deleteWebhook({ drop_pending_updates: false });
+          logger.info('Deleted existing webhook (if any)');
+        } catch (error) {
+          logger.warn('Failed to delete existing webhook (may not exist)', error);
+        }
+
         // Set webhook URL
         try {
           await bot.telegram.setWebhook(WEBHOOK_URL);
@@ -120,8 +139,24 @@ async function startBot() {
         });
       });
     } else {
-      // Polling mode for development
-      logger.info('Starting bot in polling mode');
+      // Polling mode for development only
+      if (IS_PRODUCTION) {
+        logger.error(
+          'Polling mode cannot be used in production. ' +
+            'Please set TELEGRAM_WEBHOOK_URL environment variable.'
+        );
+        process.exit(1);
+      }
+
+      logger.info('Starting bot in polling mode (development only)');
+
+      // Delete any existing webhook before starting polling to avoid conflicts
+      try {
+        await bot.telegram.deleteWebhook({ drop_pending_updates: true });
+        logger.info('Deleted existing webhook before starting polling');
+      } catch (error) {
+        logger.warn('Failed to delete webhook (may not exist)', error);
+      }
 
       await bot.launch();
       logger.info('Telegram bot started successfully (polling mode)');
@@ -135,8 +170,19 @@ async function startBot() {
         }
       });
     }
-  } catch (error) {
-    logger.error('Failed to start bot', error);
+  } catch (error: any) {
+    // Handle specific Telegram API errors
+    if (error?.response?.error_code === 409) {
+      logger.error(
+        'Telegram API Error 409: Conflict - Another bot instance is running.\n' +
+          'This usually means:\n' +
+          '1. Another instance of the bot is using polling mode\n' +
+          '2. A webhook is already set and conflicting with polling\n' +
+          'Solution: Make sure only one bot instance is running, or use webhook mode in production.'
+      );
+    } else {
+      logger.error('Failed to start bot', error);
+    }
     process.exit(1);
   }
 }
