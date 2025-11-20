@@ -96,9 +96,12 @@ RUN chown -R nodejs:nodejs /app/dist /app/logs /app/docker-entrypoint.sh /app/pa
 
 USER nodejs
 
-EXPOSE 3000
-
-ENV PORT=3000
+# Railway automatically sets PORT environment variable
+# Use PORT from environment, default to 3000 for local development
+ENV PORT=${PORT:-3000}
 ENV NODE_ENV=production
+
+# Expose the port (Railway will use PORT env var, but we expose common ports)
+EXPOSE 3000 8080
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
