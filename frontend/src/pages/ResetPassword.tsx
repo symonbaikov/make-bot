@@ -1,4 +1,7 @@
-// Reset password page component
+/**
+ * Reset password page component
+ * Allows users to login using a reset code sent to their email
+ */
 import { useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
