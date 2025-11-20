@@ -25,33 +25,41 @@ fi
 # Run Prisma migrations/push
 echo "Running database migrations..."
 echo "DATABASE_URL is set: $(if [ -n "$DATABASE_URL" ]; then echo 'yes'; else echo 'no'; fi)"
+echo "Current directory: $(pwd)"
+echo "Prisma schema location: $(ls -la prisma/schema.prisma 2>/dev/null || echo 'NOT FOUND')"
 
-# Use db push for development/testing, migrate deploy for production
-if [ -f "prisma/migrations" ] && [ "$(ls -A prisma/migrations 2>/dev/null)" ]; then
-  echo "Migrations found, using migrate deploy..."
-  npx prisma migrate deploy || {
-    echo "Migration deploy failed, trying db push..."
-    npx prisma db push --skip-generate --accept-data-loss || {
-      echo "Database push also failed!"
-      exit 1
-    }
-  }
-else
-  echo "No migrations found, using db push..."
-  npx prisma db push --skip-generate --accept-data-loss || {
-    echo "Database push failed!"
-    exit 1
-  }
-fi
+# Use db push (more reliable for Railway, creates tables from schema)
+echo "Applying database schema with db push..."
+npx prisma db push --skip-generate --accept-data-loss || {
+  echo "ERROR: Database push failed!"
+  echo "DATABASE_URL preview: $(echo "$DATABASE_URL" | cut -c1-50)..."
+  echo "Checking Prisma schema..."
+  ls -la prisma/ || echo "prisma directory not found"
+  exit 1
+}
 
-echo "Database is up to date!"
+echo "✅ Database schema applied successfully!"
 
-# Run seed if DATABASE_URL is set (optional, but recommended)
+# Run seed to create admin user
 if [ -n "$DATABASE_URL" ]; then
   echo "Running database seed..."
-  npm run db:seed || {
-    echo "Warning: Database seed failed, but continuing..."
-  }
+  # Seed uses tsx, but we can run it with node if compiled, or use tsx if available
+  if command -v tsx >/dev/null 2>&1; then
+    tsx prisma/seed.ts || {
+      echo "Warning: Database seed failed with tsx, but continuing..."
+    }
+  elif [ -f "node_modules/.bin/tsx" ]; then
+    node_modules/.bin/tsx prisma/seed.ts || {
+      echo "Warning: Database seed failed, but continuing..."
+    }
+  else
+    echo "tsx not found, trying to install and run seed..."
+    npx tsx prisma/seed.ts || {
+      echo "Warning: Database seed failed, but continuing..."
+    }
+  fi
+else
+  echo "DATABASE_URL not set, skipping seed..."
 fi
 
 # Start the application
