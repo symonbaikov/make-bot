@@ -93,9 +93,15 @@ async function initializeDatabase(): Promise<void> {
         // Accept the DATABASE_URL as-is in production
       } else {
         // In production, DATABASE_URL must be set
-        throw new Error(
-          'DATABASE_URL is required in production mode. Please set the DATABASE_URL environment variable.'
-        );
+        const errorMsg = 
+          'DATABASE_URL is required in production mode. Please set the DATABASE_URL environment variable.\n' +
+          'If you are using Railway PostgreSQL service, copy the DATABASE_URL from PostgreSQL service variables.\n' +
+          'Current DATABASE_URL value: ' + (process.env.DATABASE_URL || 'not set');
+        logger.error(errorMsg, {
+          databaseUrl: process.env.DATABASE_URL || 'not set',
+          nodeEnv: process.env.NODE_ENV,
+        });
+        throw new Error(errorMsg);
       }
     } else {
       // Development: try auto-detection
