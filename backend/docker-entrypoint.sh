@@ -68,6 +68,7 @@ echo "=========================================="
 if [ -n "$DATABASE_URL" ]; then
   echo "Running database seed..."
   # Seed uses tsx, but we can run it with node if compiled, or use tsx if available
+  # Use npx directly (not npm run) to avoid workspace issues
   if command -v tsx >/dev/null 2>&1; then
     tsx prisma/seed.ts || {
       echo "Warning: Database seed failed with tsx, but continuing..."
@@ -77,7 +78,7 @@ if [ -n "$DATABASE_URL" ]; then
       echo "Warning: Database seed failed, but continuing..."
     }
   else
-    echo "tsx not found, trying to install and run seed..."
+    echo "tsx not found, trying to run seed with npx..."
     npx tsx prisma/seed.ts || {
       echo "Warning: Database seed failed, but continuing..."
     }
