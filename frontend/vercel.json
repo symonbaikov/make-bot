@@ -1,7 +1,7 @@
 {
-  "buildCommand": "npm install && npm run build --workspace=frontend",
-  "outputDirectory": "frontend/dist",
-  "devCommand": "npm run dev --workspace=frontend",
+  "buildCommand": "npm install && npm run build",
+  "outputDirectory": "dist",
+  "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "vite",
   "rewrites": [
@@ -15,3 +15,4 @@
     }
   ]
 }
+
