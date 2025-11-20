@@ -38,11 +38,8 @@ RUN test -f tsconfig.json || (echo "ERROR: tsconfig.json not found!" && exit 1)
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
-# Build arg to force cache invalidation when needed
-ARG BUILD_DATE=unknown
-RUN echo "Build date: ${BUILD_DATE}"
-
 # Copy frontend directory with all files (source, configs, etc.)
+# Note: This layer will be cached by Docker. To force rebuild, change this comment.
 COPY frontend ./frontend
 
 # Verify frontend source exists
