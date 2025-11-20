@@ -30,15 +30,20 @@ git push origin main
 
 ### 3. Настройка проекта
 
-**Root Directory:** Оставьте пустым (или укажите `frontend` если деплоите только фронтенд)
+**Root Directory:** `frontend` (важно! Деплоим только фронтенд)
 
 **Framework Preset:** Vite (должен определиться автоматически)
 
-**Build Command:** `npm install && npm run build --workspace=frontend`
+**Build Command:** `npm install --include=dev && npm run build`
 
-**Output Directory:** `frontend/dist`
+**Output Directory:** `dist`
 
-**Install Command:** `npm install`
+**Install Command:** `npm install --include=dev`
+
+**Важно:** 
+- Root Directory должен быть `frontend`, не `backend`!
+- Используем `--include=dev` чтобы установить TypeScript и другие devDependencies
+- Команды выполняются относительно `frontend` директории
 
 ### 4. Переменные окружения
 
