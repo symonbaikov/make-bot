@@ -66,7 +66,7 @@ export class AdminController {
    * GET /api/admin/payments
    * List payments/sessions with filters
    */
-  listPayments = asyncHandler(async (req: Request<unknown, unknown, unknown, ListSessionsInput>, res: Response) => {
+  listPayments = asyncHandler<unknown, unknown, unknown, ListSessionsInput>(async (req: Request<unknown, unknown, unknown, ListSessionsInput>, res: Response) => {
     const query = req.query;
 
     const result = await sessionService.list({
@@ -86,7 +86,7 @@ export class AdminController {
    * GET /api/admin/payments/:id
    * Get payment/session details
    */
-  getPayment = asyncHandler(async (req: Request<{ id: string }>, res: Response) => {
+  getPayment = asyncHandler<{ id: string }>(async (req: Request<{ id: string }>, res: Response) => {
     const { id } = req.params;
 
     // Try to find by sessionId first, then by id
@@ -112,7 +112,7 @@ export class AdminController {
    * POST /api/admin/payments/:id/resend
    * Resend email (trigger provisioning)
    */
-  resendEmail = asyncHandler(async (req: AuthRequest<{ id: string }>, res: Response) => {
+  resendEmail = asyncHandler<{ id: string }>(async (req: AuthRequest<{ id: string }>, res: Response) => {
     const { id } = req.params;
 
     const session = await sessionService.findBySessionId(id) || await sessionService.findById(id);
@@ -155,7 +155,7 @@ export class AdminController {
    * PUT /api/admin/payments/:id/email
    * Update email address
    */
-  updateEmail = asyncHandler(async (
+  updateEmail = asyncHandler<{ id: string }, unknown, UpdateEmailInput>(async (
     req: AuthRequest<{ id: string }, unknown, UpdateEmailInput>,
     res: Response
   ) => {
@@ -179,7 +179,7 @@ export class AdminController {
    * POST /api/admin/payments/:id/send-email
    * Send custom email to user
    */
-  sendEmail = asyncHandler(async (
+  sendEmail = asyncHandler<{ id: string }, unknown, SendEmailInput>(async (
     req: AuthRequest<{ id: string }, unknown, SendEmailInput>,
     res: Response
   ) => {
@@ -224,7 +224,7 @@ export class AdminController {
    * POST /api/admin/payments/:id/grant-access
    * Manually grant access
    */
-  grantAccess = asyncHandler(async (req: AuthRequest<{ id: string }>, res: Response) => {
+  grantAccess = asyncHandler<{ id: string }>(async (req: AuthRequest<{ id: string }>, res: Response) => {
     const { id } = req.params;
 
     const session = await sessionService.findBySessionId(id) || await sessionService.findById(id);
@@ -302,7 +302,7 @@ export class AdminController {
    * GET /api/admin/actions
    * List activity log
    */
-  listActions = asyncHandler(async (req: Request<unknown, unknown, unknown, ListActionsInput>, res: Response) => {
+  listActions = asyncHandler<unknown, unknown, unknown, ListActionsInput>(async (req: Request<unknown, unknown, unknown, ListActionsInput>, res: Response) => {
     const query = req.query;
 
     const result = await actionService.list({
@@ -321,7 +321,7 @@ export class AdminController {
    * POST /api/admin/sessions
    * Create session manually
    */
-  createSession = asyncHandler(async (
+  createSession = asyncHandler<unknown, unknown, CreateSessionInput>(async (
     req: AuthRequest<unknown, unknown, CreateSessionInput>,
     res: Response
   ) => {

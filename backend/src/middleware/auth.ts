@@ -3,7 +3,12 @@ import jwt from 'jsonwebtoken';
 import { UnauthorizedError, ForbiddenError } from '../utils/errors';
 import { sendError } from '../utils/response';
 
-export interface AuthRequest extends Request {
+export interface AuthRequest<
+  P = Record<string, string>,
+  ResBody = any,
+  ReqBody = any,
+  ReqQuery = any
+> extends Request<P, ResBody, ReqBody, ReqQuery> {
   user?: {
     id: string;
     email: string;
