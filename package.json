@@ -17,7 +17,7 @@
     "db:start": "bash backend/scripts/start-db.sh",
     "db:check": "bash backend/scripts/check-db.sh",
     "db:setup-local": "bash backend/scripts/setup-local-db.sh",
-    "build": "npm run build --workspaces",
+    "build": "npm run build --workspace=frontend && npm run build --workspace=backend",
     "lint": "npm run lint --workspaces",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\""

@@ -40,7 +40,8 @@ git push origin main
 
 **Install Command:** `npm install --include=dev`
 
-**Важно:** 
+**Важно:**
+
 - Root Directory должен быть `frontend`, не `backend`!
 - Используем `--include=dev` чтобы установить TypeScript и другие devDependencies
 - Команды выполняются относительно `frontend` директории

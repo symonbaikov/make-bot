@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import path from 'path';
 // Sentry is initialized in utils/sentry.ts
 import { logger } from './utils/logger';
 import { initSentry } from './utils/sentry';
@@ -184,8 +185,12 @@ function startServer() {
   app.set('trust proxy', 1);
 
   // CORS middleware (must be before helmet)
+  // In production, allow same-origin requests (monolithic app)
+  // In development, allow Vite dev server
   const allowedOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+    : process.env.NODE_ENV === 'production'
+    ? [] // Same-origin in production (monolithic app)
     : ['http://localhost:5173', 'http://localhost:3000'];
 
   const corsOptions = {
@@ -198,12 +203,19 @@ function startServer() {
         return callback(null, true);
       }
 
+      // In production (monolithic app), allow same-origin requests
+      if (process.env.NODE_ENV === 'production') {
+        // Allow same-origin (no origin header means same-origin)
+        callback(null, true);
+        return;
+      }
+
       // Check if origin is in allowed list
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         // In development, allow localhost on any port
-        if (process.env.NODE_ENV !== 'production' && origin.startsWith('http://localhost:')) {
+        if (origin.startsWith('http://localhost:')) {
           callback(null, true);
         } else {
           callback(new Error('Not allowed by CORS'));
@@ -246,14 +258,37 @@ function startServer() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // Routes
+  // API Routes (must be before static files)
   const webhookRoutes = require('./routes/webhook-routes').default;
   const adminRoutes = require('./routes/admin-routes').default;
   app.use('/api/webhook', webhookRoutes);
   app.use('/api/admin', adminRoutes);
 
-  // 404 handler
-  app.use((_req, res) => {
+  // Serve static files from frontend build (in production)
+  // In development, frontend is served by Vite dev server
+  if (process.env.NODE_ENV === 'production') {
+    // In CommonJS, __dirname is available
+    const frontendDistPath = path.join(__dirname, '../../frontend/dist');
+    
+    // Serve static assets (JS, CSS, images, etc.)
+    app.use(express.static(frontendDistPath, {
+      maxAge: '1y', // Cache static assets for 1 year
+      etag: true,
+    }));
+
+    // SPA routing: serve index.html for all non-API routes
+    app.get('*', (req, res, next) => {
+      // Skip API routes
+      if (req.path.startsWith('/api')) {
+        return next();
+      }
+      // Serve index.html for all other routes (SPA routing)
+      res.sendFile(path.join(frontendDistPath, 'index.html'));
+    });
+  }
+
+  // 404 handler for API routes only
+  app.use('/api/*', (_req, res) => {
     sendError(res, 'Not found', 'NOT_FOUND', 404);
   });
 

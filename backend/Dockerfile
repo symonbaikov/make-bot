@@ -24,8 +24,13 @@ COPY --from=deps /app/node_modules ./node_modules
 
 # Copy source code and configs
 COPY backend ./backend
+COPY frontend ./frontend
 COPY package.json ./
 COPY tsconfig.json ./
+
+# Build frontend first (monolithic build)
+WORKDIR /app/frontend
+RUN npm run build || (echo "Frontend build failed!" && exit 1)
 
 # Build backend
 WORKDIR /app/backend
@@ -67,6 +72,8 @@ COPY --from=builder /app/backend/package.json ./
 COPY --from=builder /app/backend/prisma ./prisma
 COPY backend/docker-entrypoint.sh ./docker-entrypoint.sh
 COPY --from=builder /app/backend/dist ./dist
+# Copy frontend build for static file serving
+COPY --from=builder /app/frontend/dist ./frontend/dist
 
 # Copy node_modules from builder (workspace structure)
 # Note: This includes all dependencies, but chown optimization below makes it faster
