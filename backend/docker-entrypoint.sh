@@ -12,9 +12,10 @@ done
 
 echo "Database is ready!"
 
-# Generate Prisma client if not already generated
-if [ ! -d "node_modules/.prisma/client" ]; then
-  echo "Prisma client not found, generating..."
+# Generate Prisma client if not already generated or if binary target mismatch
+# Check if Query Engine exists for current platform
+if [ ! -d "node_modules/.prisma/client" ] || [ ! -f "node_modules/.prisma/client/query-engine-linux-musl-openssl-3.0.x" ] && [ ! -f "node_modules/.prisma/client/query-engine-linux-musl-arm64-openssl-3.0.x" ]; then
+  echo "Prisma client not found or missing Query Engine, generating..."
   export PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
   npx prisma generate || {
     echo "Warning: Prisma generate failed, but continuing..."

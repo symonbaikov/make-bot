@@ -43,8 +43,8 @@ WORKDIR /app/backend
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 ENV PRISMA_SKIP_POSTINSTALL_GENERATE=1
 
-# Generate Prisma client (skip retry logic to speed up build)
-# If it fails, it will be generated at runtime in docker-entrypoint.sh
+# Generate Prisma client with all binary targets
+# This ensures Query Engine is available for the deployment platform
 RUN npm run db:generate || echo "Warning: Prisma generate failed, will retry at runtime"
 
 # Build TypeScript to JavaScript - continue even if there are type errors
