@@ -77,6 +77,14 @@ TELEGRAM_BOT_TOKEN="your-telegram-bot-token-from-botfather"
 # Backend API URL
 API_URL="http://localhost:3000"
 
+# Webhook Configuration (Optional - для production)
+# Если установлена, бот будет использовать webhook режим вместо polling
+# Формат: https://your-bot-domain.com/webhook
+TELEGRAM_WEBHOOK_URL=""
+
+# Server Port (Optional - по умолчанию 3001)
+PORT=3001
+
 # PayPal Configuration (Optional)
 PAYPAL_CLIENT_ID="your-paypal-client-id"
 PAYPAL_MODE="sandbox"
@@ -87,6 +95,11 @@ PAYPAL_MODE="sandbox"
 - **NODE_ENV** - Окружение (`development` | `production`)
 - **TELEGRAM_BOT_TOKEN** - Токен бота от @BotFather (обязательно!)
 - **API_URL** - URL Backend API (по умолчанию: http://localhost:3000)
+- **TELEGRAM_WEBHOOK_URL** - URL для webhook режима (опционально)
+  - Если установлена → бот использует webhook режим (рекомендуется для production)
+  - Если не установлена → бот использует polling режим (для development)
+  - Формат: `https://your-bot-domain.com/webhook`
+- **PORT** - Порт для webhook сервера (по умолчанию: 3001)
 - **PAYPAL_CLIENT_ID** - PayPal Client ID (опционально, для генерации PayPal ссылок)
 - **PAYPAL_MODE** - Режим PayPal (`sandbox` | `live`)
 
@@ -143,6 +156,10 @@ cp frontend/.env.example frontend/.env
    - Отправьте `/newbot`
    - Следуйте инструкциям
    - Скопируйте токен
+2. **TELEGRAM_WEBHOOK_URL** (для production):
+   - Оставьте пустым для development (будет использован polling режим)
+   - Для production установите URL вида: `https://your-bot-domain.com/webhook`
+   - Бот автоматически установит webhook при запуске
 
 #### Frontend (.env):
 1. **VITE_API_URL** - Оставьте `http://localhost:3000` для разработки
@@ -210,6 +227,8 @@ TELEGRAM_BOT_USERNAME="your_production_bot"
 NODE_ENV=production
 TELEGRAM_BOT_TOKEN="your-production-bot-token"
 API_URL="https://api.your-domain.com"
+TELEGRAM_WEBHOOK_URL="https://your-bot.railway.app/webhook"
+PORT=3001
 ```
 
 **frontend/.env:**

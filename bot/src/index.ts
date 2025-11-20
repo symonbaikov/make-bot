@@ -1,4 +1,5 @@
 import { Telegraf } from 'telegraf';
+import express from 'express';
 import dotenv from 'dotenv';
 import { sessionMiddleware, BotContext } from './middleware/session-middleware';
 import { handleStart } from './handlers/start-handler';
@@ -17,6 +18,9 @@ dotenv.config();
 initSentry();
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const WEBHOOK_URL = process.env.TELEGRAM_WEBHOOK_URL;
+const PORT = process.env.PORT || 3001;
+const USE_WEBHOOK = !!WEBHOOK_URL;
 
 if (!BOT_TOKEN) {
   logger.error('TELEGRAM_BOT_TOKEN is not set in environment variables');
@@ -67,34 +71,97 @@ bot.on('message', async ctx => {
 });
 
 // Launch bot
-bot
-  .launch()
-  .then(() => {
-    logger.info('Telegram bot started successfully');
+async function startBot() {
+  try {
+    if (USE_WEBHOOK) {
+      // Webhook mode for production
+      logger.info(`Starting bot in webhook mode: ${WEBHOOK_URL}`);
 
-    // Check backend API availability
-    apiClient.healthCheck().then(isAvailable => {
-      if (isAvailable) {
-        logger.info('Backend API is available');
-      } else {
-        logger.warn('Backend API is not available - some features may not work');
-      }
-    });
-  })
-  .catch(error => {
+      // Create Express app for webhook
+      const app = express();
+      app.use(express.json());
+
+      // Health check endpoint
+      app.get('/health', (req, res) => {
+        res.json({ status: 'ok', mode: 'webhook' });
+      });
+
+      // Webhook endpoint - use webhookCallback for proper request handling
+      app.post('/webhook', async (req, res) => {
+        try {
+          await bot.handleUpdate(req.body);
+          res.sendStatus(200);
+        } catch (error) {
+          logger.error('Error handling webhook update', error);
+          res.sendStatus(200); // Always return 200 to Telegram to avoid retries
+        }
+      });
+
+      // Start Express server
+      app.listen(PORT, async () => {
+        logger.info(`Webhook server listening on port ${PORT}`);
+
+        // Set webhook URL
+        try {
+          await bot.telegram.setWebhook(WEBHOOK_URL);
+          logger.info(`Webhook set to: ${WEBHOOK_URL}`);
+        } catch (error) {
+          logger.error('Failed to set webhook', error);
+          throw error;
+        }
+
+        // Check backend API availability
+        apiClient.healthCheck().then(isAvailable => {
+          if (isAvailable) {
+            logger.info('Backend API is available');
+          } else {
+            logger.warn('Backend API is not available - some features may not work');
+          }
+        });
+      });
+    } else {
+      // Polling mode for development
+      logger.info('Starting bot in polling mode');
+
+      await bot.launch();
+      logger.info('Telegram bot started successfully (polling mode)');
+
+      // Check backend API availability
+      apiClient.healthCheck().then(isAvailable => {
+        if (isAvailable) {
+          logger.info('Backend API is available');
+        } else {
+          logger.warn('Backend API is not available - some features may not work');
+        }
+      });
+    }
+  } catch (error) {
     logger.error('Failed to start bot', error);
     process.exit(1);
-  });
+  }
+}
+
+startBot();
 
 // Graceful shutdown
-process.once('SIGINT', () => {
+process.once('SIGINT', async () => {
   logger.info('Shutting down bot...');
-  bot.stop('SIGINT');
+  if (USE_WEBHOOK) {
+    await bot.telegram.deleteWebhook();
+    logger.info('Webhook deleted');
+  } else {
+    bot.stop('SIGINT');
+  }
   process.exit(0);
 });
 
-process.once('SIGTERM', () => {
+process.once('SIGTERM', async () => {
   logger.info('Shutting down bot...');
-  bot.stop('SIGTERM');
+  if (USE_WEBHOOK) {
+    await bot.telegram.deleteWebhook();
+    logger.info('Webhook deleted');
+  } else {
+    bot.stop('SIGTERM');
+  }
   process.exit(0);
 });

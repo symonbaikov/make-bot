@@ -49,10 +49,18 @@ TELEGRAM_BOT_USERNAME=your_bot_username
 NODE_ENV=production
 TELEGRAM_BOT_TOKEN=<токен от BotFather>
 API_URL=https://your-backend.railway.app
+PORT=3001
 ```
 
 5. Railway задеплоит Bot
-6. Получите публичный URL для Bot
+6. Получите публичный URL для Bot (например: `https://your-bot.railway.app`)
+7. **ВАЖНО:** Добавьте переменную окружения `TELEGRAM_WEBHOOK_URL`:
+
+```
+TELEGRAM_WEBHOOK_URL=https://your-bot.railway.app/webhook
+```
+
+Это переключит бота в webhook режим и предотвратит конфликты при нескольких экземплярах.
 
 ### 5. Задеплоить Frontend на Vercel
 
@@ -99,16 +107,25 @@ npm run db:seed
    - Backend API: `https://your-backend.railway.app/api/webhook/paypal`
 3. Обновите PostgreSQL подключение в Make на Railway DATABASE_URL
 
-### 8. Обновить Telegram Bot Webhook
+### 8. Настроить Telegram Bot Webhook
 
-1. Установите webhook для бота (если используете webhook режим):
+**ВАЖНО:** Бот автоматически установит webhook при запуске, если переменная `TELEGRAM_WEBHOOK_URL` установлена.
+
+Если нужно установить webhook вручную или проверить статус:
 
 ```bash
+# Проверить текущий webhook
+curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
+
+# Установить webhook вручную (если нужно)
 curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
   -d "url=https://your-bot.railway.app/webhook"
+
+# Удалить webhook (для переключения на polling)
+curl -X POST "https://api.telegram.org/bot<TOKEN>/deleteWebhook"
 ```
 
-Или используйте polling режим (проще для начала).
+**Примечание:** В production рекомендуется использовать webhook режим для избежания конфликтов при нескольких экземплярах.
 
 ---
 
