@@ -29,10 +29,12 @@ async function initializeDatabase(): Promise<void> {
     const placeholderPatterns = [
       /user:password@host:port/,
       /user:.*@host:port/,
+      /username:password@host:port/, // Common placeholder format
+      /username:.*@host:port/,
       /postgresql:\/\/user:/,
       /postgresql:\/\/.*@host:/,
-      /@host:port/,
-      /host:port/,
+      /@host:port/, // Generic host:port placeholder
+      /host:port/, // Generic host:port placeholder
       /:\/\/.*@host:/,
       /:\/\/user:.*@host/,
     ];
@@ -47,16 +49,29 @@ async function initializeDatabase(): Promise<void> {
       }
     }
 
-    // Also check for literal placeholder strings
-    if (
-      dbUrl.includes('host:port') ||
-      dbUrl.includes('user:password') ||
-      (dbUrl.includes('host') && dbUrl.includes('port') && !dbUrl.match(/\d+\.\d+\.\d+\.\d+/))
-    ) {
-      logger.warn('DATABASE_URL appears to be a template/placeholder, will auto-detect', {
-        databaseUrl: process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@'),
-      });
-      return false;
+    // Also check for literal placeholder strings (case-insensitive)
+    const placeholderKeywords = [
+      'host:port',
+      'user:password',
+      'username:password',
+      'database_name', // Common placeholder
+      '@host:', // Generic host placeholder
+      ':port/', // Generic port placeholder
+    ];
+
+    for (const keyword of placeholderKeywords) {
+      if (dbUrl.includes(keyword)) {
+        // Additional check: if it's a real IP address or domain, it's not a placeholder
+        const hasRealHost = /@[\d.]+:/.test(process.env.DATABASE_URL) || 
+                           /@[a-z0-9.-]+\.[a-z]{2,}:/i.test(process.env.DATABASE_URL);
+        if (!hasRealHost) {
+          logger.warn('DATABASE_URL appears to be a template/placeholder, will auto-detect', {
+            databaseUrl: process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@'),
+            detectedKeyword: keyword,
+          });
+          return false;
+        }
+      }
     }
 
     // Validate URL format
