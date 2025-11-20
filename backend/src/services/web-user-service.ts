@@ -46,7 +46,13 @@ async function initializePool(): Promise<void> {
       return;
     }
 
-    // Development: try auto-detection
+    // Development: try auto-detection (only if not in production)
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'DATABASE_URL is required in production mode. Please set the DATABASE_URL environment variable in Railway.'
+      );
+    }
+    
     const { detectDatabaseConnection } = await import('../utils/db-connection');
     const config = await detectDatabaseConnection();
 

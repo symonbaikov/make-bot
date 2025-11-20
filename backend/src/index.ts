@@ -391,7 +391,7 @@ function startServer() {
           return next();
         }
         // Serve index.html for all other routes (SPA routing)
-        res.sendFile(indexHtmlPath, (err) => {
+        res.sendFile(indexHtmlPath, err => {
           if (err) {
             logger.error('Failed to send index.html', {
               error: err.message,

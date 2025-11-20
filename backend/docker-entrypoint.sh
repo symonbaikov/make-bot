@@ -24,14 +24,35 @@ fi
 
 # Run Prisma migrations/push
 echo "Running database migrations..."
-npx prisma db push --skip-generate --accept-data-loss || {
-  echo "Database push failed, trying migrate deploy..."
+echo "DATABASE_URL is set: $(if [ -n "$DATABASE_URL" ]; then echo 'yes'; else echo 'no'; fi)"
+
+# Use db push for development/testing, migrate deploy for production
+if [ -f "prisma/migrations" ] && [ "$(ls -A prisma/migrations 2>/dev/null)" ]; then
+  echo "Migrations found, using migrate deploy..."
   npx prisma migrate deploy || {
-    echo "Migration failed, but continuing..."
+    echo "Migration deploy failed, trying db push..."
+    npx prisma db push --skip-generate --accept-data-loss || {
+      echo "Database push also failed!"
+      exit 1
+    }
   }
-}
+else
+  echo "No migrations found, using db push..."
+  npx prisma db push --skip-generate --accept-data-loss || {
+    echo "Database push failed!"
+    exit 1
+  }
+fi
 
 echo "Database is up to date!"
+
+# Run seed if DATABASE_URL is set (optional, but recommended)
+if [ -n "$DATABASE_URL" ]; then
+  echo "Running database seed..."
+  npm run db:seed || {
+    echo "Warning: Database seed failed, but continuing..."
+  }
+fi
 
 # Start the application
 echo "Starting application..."
