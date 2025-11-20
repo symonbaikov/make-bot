@@ -1,21 +1,25 @@
-import { PrismaClient, User } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 import { NotFoundError } from '../utils/errors';
 
 export class UserService {
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string): Promise<Prisma.UserGetPayload<Record<string, never>> | null> {
     return prisma.user.findUnique({
       where: { email },
     });
   }
 
-  async findByTgUserId(tgUserId: string): Promise<User | null> {
+  async findByTgUserId(tgUserId: string): Promise<Prisma.UserGetPayload<Record<string, never>> | null> {
     return prisma.user.findUnique({
       where: { tgUserId },
     });
   }
 
-  async findById(id: string): Promise<User | null> {
+  async findById(id: string): Promise<Prisma.UserGetPayload<{
+    include: {
+      sessions: true;
+    };
+  }> | null> {
     return prisma.user.findUnique({
       where: { id },
       include: {
@@ -30,7 +34,7 @@ export class UserService {
     lastName?: string;
     phoneNumber?: string;
     tgUserId?: string;
-  }): Promise<User> {
+  }): Promise<Prisma.UserGetPayload<Record<string, never>>> {
     return prisma.user.create({
       data,
     });
@@ -42,7 +46,7 @@ export class UserService {
     firstName?: string;
     lastName?: string;
     phoneNumber?: string;
-  }): Promise<User> {
+  }): Promise<Prisma.UserGetPayload<Record<string, never>>> {
     return prisma.user.upsert({
       where: { tgUserId: data.tgUserId },
       update: {
@@ -60,7 +64,7 @@ export class UserService {
     firstName?: string;
     lastName?: string;
     phoneNumber?: string;
-  }): Promise<User> {
+  }): Promise<Prisma.UserGetPayload<Record<string, never>>> {
     const user = await this.findById(id);
     if (!user) {
       throw new NotFoundError('User');

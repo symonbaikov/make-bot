@@ -1,5 +1,5 @@
 import { prisma } from '../utils/prisma';
-import { SessionStatus, Plan } from '@prisma/client';
+import { Prisma, Plan, SessionStatus } from '@prisma/client';
 import { Response } from 'express';
 import { format as formatDate } from 'date-fns';
 
@@ -16,7 +16,7 @@ export class ExportService {
     params: ExportParams,
     res: Response
   ): Promise<void> {
-    const where: Record<string, unknown> = {};
+    const where: Prisma.SessionWhereInput = {};
 
     if (params.status) {
       where.status = params.status;
@@ -29,10 +29,10 @@ export class ExportService {
     if (params.startDate || params.endDate) {
       where.createdAt = {};
       if (params.startDate) {
-        where.createdAt.gte = params.startDate;
+        (where.createdAt as Prisma.DateTimeFilter).gte = params.startDate;
       }
       if (params.endDate) {
-        where.createdAt.lte = params.endDate;
+        (where.createdAt as Prisma.DateTimeFilter).lte = params.endDate;
       }
     }
 
@@ -62,7 +62,7 @@ export class ExportService {
       plan: Plan;
       emailUser: string | null;
       emailPaypal: string | null;
-      amount: number;
+      amount: number | Prisma.Decimal;
       currency: string;
       status: SessionStatus;
       paymentDate: Date | null;
@@ -111,7 +111,7 @@ export class ExportService {
         session.emailUser || '',
         session.emailPaypal || '',
         finalEmail,
-        session.amount.toString(),
+        Number(session.amount).toString(),
         session.currency,
         session.status,
         session.paymentDate ? formatDate(session.paymentDate, 'yyyy-MM-dd HH:mm:ss') : '',

@@ -1,17 +1,15 @@
-import {
-  PrismaClient,
-  Session,
-  SessionStatus,
-  Plan,
-  ActionType,
-} from '@prisma/client';
+import { Prisma, Plan, SessionStatus, ActionType } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 import { NotFoundError, ValidationError } from '../utils/errors';
 import { actionService } from './action-service';
-import { logger } from '../utils/logger';
 
 export class SessionService {
-  async findBySessionId(sessionId: string): Promise<Session | null> {
+  async findBySessionId(sessionId: string): Promise<Prisma.SessionGetPayload<{
+    include: {
+      user: true;
+      actions: true;
+    };
+  }> | null> {
     return prisma.session.findUnique({
       where: { sessionId },
       include: {
@@ -24,7 +22,11 @@ export class SessionService {
     });
   }
 
-  async findByTxnId(txnId: string): Promise<Session | null> {
+  async findByTxnId(txnId: string): Promise<Prisma.SessionGetPayload<{
+    include: {
+      user: true;
+    };
+  }> | null> {
     return prisma.session.findUnique({
       where: { txnId },
       include: {
@@ -33,7 +35,12 @@ export class SessionService {
     });
   }
 
-  async findById(id: string): Promise<Session | null> {
+  async findById(id: string): Promise<Prisma.SessionGetPayload<{
+    include: {
+      user: true;
+      actions: true;
+    };
+  }> | null> {
     return prisma.session.findUnique({
       where: { id },
       include: {
@@ -52,7 +59,7 @@ export class SessionService {
     currency?: string;
     userId?: string;
     meta?: Record<string, unknown>;
-  }): Promise<Session> {
+  }): Promise<Prisma.SessionGetPayload<Record<string, never>>> {
     const session = await prisma.session.create({
       data: {
         sessionId: data.sessionId,
@@ -61,7 +68,7 @@ export class SessionService {
         currency: data.currency || 'USD',
         status: SessionStatus.STARTED,
         userId: data.userId,
-        meta: data.meta || {},
+        meta: (data.meta || {}) as Prisma.InputJsonValue,
       },
     });
 
@@ -87,7 +94,7 @@ export class SessionService {
     lastName?: string;
     phoneNumber?: string;
     meta?: Record<string, unknown>;
-  }): Promise<Session> {
+  }): Promise<Prisma.SessionGetPayload<Record<string, never>>> {
     // Find or create user if tgUserId provided
     let userId: string | undefined;
     if (data.tgUserId) {
@@ -120,7 +127,7 @@ export class SessionService {
       update: {
         emailUser: data.emailUser,
         userId,
-        meta: data.meta || existingSession?.meta || {},
+        meta: ((data.meta || existingSession?.meta || {}) as Prisma.InputJsonValue),
       },
       create: {
         sessionId: data.sessionId,
@@ -130,7 +137,7 @@ export class SessionService {
         status: SessionStatus.AWAITING_PAYMENT,
         emailUser: data.emailUser,
         userId,
-        meta: data.meta || {},
+        meta: (data.meta || {}) as Prisma.InputJsonValue,
       },
     });
 
@@ -154,7 +161,7 @@ export class SessionService {
     paymentDate?: Date;
     status?: SessionStatus;
     meta?: Record<string, unknown>;
-  }): Promise<Session> {
+  }): Promise<Prisma.SessionGetPayload<Record<string, never>>> {
     const session = await this.findBySessionId(data.sessionId);
     if (!session) {
       throw new NotFoundError('Session');
@@ -173,10 +180,10 @@ export class SessionService {
         emailPaypal: data.emailPaypal,
         paymentDate: data.paymentDate || new Date(),
         status: data.status || SessionStatus.PAID,
-        meta: {
+        meta: ({
           ...((session.meta as Record<string, unknown>) || {}),
           ...(data.meta || {}),
-        },
+        }) as Prisma.InputJsonValue,
       },
     });
 
@@ -195,7 +202,7 @@ export class SessionService {
     return updatedSession;
   }
 
-  async updateEmail(sessionId: string, email: string): Promise<Session> {
+  async updateEmail(sessionId: string, email: string): Promise<Prisma.SessionGetPayload<Record<string, never>>> {
     const session = await this.findBySessionId(sessionId);
     if (!session) {
       throw new NotFoundError('Session');
@@ -222,7 +229,7 @@ export class SessionService {
     sessionId: string,
     status: SessionStatus,
     meta?: Record<string, unknown>
-  ): Promise<Session> {
+  ): Promise<Prisma.SessionGetPayload<Record<string, never>>> {
     const session = await this.findBySessionId(sessionId);
     if (!session) {
       throw new NotFoundError('Session');
@@ -232,10 +239,10 @@ export class SessionService {
       where: { sessionId },
       data: {
         status,
-        meta: {
+        meta: ({
           ...((session.meta as Record<string, unknown>) || {}),
           ...(meta || {}),
-        },
+        }) as Prisma.InputJsonValue,
       },
     });
   }
@@ -244,7 +251,7 @@ export class SessionService {
    * Get final email according to business rules:
    * email_user (if exists) ELSE email_paypal
    */
-  getFinalEmail(session: Session): string | null {
+  getFinalEmail(session: { emailUser: string | null; emailPaypal: string | null }): string | null {
     return session.emailUser || session.emailPaypal || null;
   }
 
@@ -266,7 +273,11 @@ export class SessionService {
     startDate?: Date;
     endDate?: Date;
   }): Promise<{
-    data: Session[];
+    data: Prisma.SessionGetPayload<{
+      include: {
+        user: true;
+      };
+    }>[];
     total: number;
     page: number;
     limit: number;
@@ -276,7 +287,7 @@ export class SessionService {
     const limit = params.limit || 20;
     const skip = (page - 1) * limit;
 
-    const where: Record<string, unknown> = {};
+    const where: Prisma.SessionWhereInput = {};
 
     if (params.status) {
       where.status = params.status;
@@ -289,10 +300,10 @@ export class SessionService {
     if (params.startDate || params.endDate) {
       where.createdAt = {};
       if (params.startDate) {
-        where.createdAt.gte = params.startDate;
+        (where.createdAt as Prisma.DateTimeFilter).gte = params.startDate;
       }
       if (params.endDate) {
-        where.createdAt.lte = params.endDate;
+        (where.createdAt as Prisma.DateTimeFilter).lte = params.endDate;
       }
     }
 

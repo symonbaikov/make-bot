@@ -19,7 +19,7 @@ import {
   ListSessionsInput,
   ListActionsInput,
 } from '../validators/admin-validators';
-import { SessionStatus, ActionType, Plan } from '@prisma/client';
+import { Plan, SessionStatus, ActionType } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 
 export class AdminController {
@@ -70,13 +70,13 @@ export class AdminController {
     const query = req.query;
 
     const result = await sessionService.list({
-      page: query.page,
-      limit: query.limit,
-      status: query.status,
-      plan: query.plan,
-      search: query.search,
-      startDate: query.startDate ? new Date(query.startDate) : undefined,
-      endDate: query.endDate ? new Date(query.endDate) : undefined,
+      page: query.page as number | undefined,
+      limit: query.limit as number | undefined,
+      status: query.status as SessionStatus | undefined,
+      plan: query.plan as Plan | undefined,
+      search: query.search as string | undefined,
+      startDate: query.startDate ? new Date(query.startDate as string) : undefined,
+      endDate: query.endDate ? new Date(query.endDate as string) : undefined,
     });
 
     sendSuccess(res, result);
@@ -306,12 +306,12 @@ export class AdminController {
     const query = req.query;
 
     const result = await actionService.list({
-      page: query.page,
-      limit: query.limit,
-      type: query.type as any,
-      ref: query.ref,
-      startDate: query.startDate ? new Date(query.startDate) : undefined,
-      endDate: query.endDate ? new Date(query.endDate) : undefined,
+      page: query.page as number | undefined,
+      limit: query.limit as number | undefined,
+      type: query.type ? (query.type as ActionType) : undefined,
+      ref: query.ref as string | undefined,
+      startDate: query.startDate ? new Date(query.startDate as string) : undefined,
+      endDate: query.endDate ? new Date(query.endDate as string) : undefined,
     });
 
     sendSuccess(res, result);
@@ -330,9 +330,9 @@ export class AdminController {
 
     const session = await sessionService.create({
       sessionId,
-      plan: data.plan,
-      amount: data.amount,
-      currency: data.currency,
+      plan: data.plan as Plan,
+      amount: data.amount as number,
+      currency: data.currency as string | undefined,
       meta: {
         createdBy: req.user?.id,
         manual: true,
@@ -360,11 +360,11 @@ export class AdminController {
 
     await exportService.exportSessions(
       {
-        status: query.status,
-        plan: query.plan,
-        startDate: query.startDate ? new Date(query.startDate) : undefined,
-        endDate: query.endDate ? new Date(query.endDate) : undefined,
-        format: query.format || 'csv',
+        status: query.status as SessionStatus | undefined,
+        plan: query.plan as Plan | undefined,
+        startDate: query.startDate ? new Date(query.startDate as string) : undefined,
+        endDate: query.endDate ? new Date(query.endDate as string) : undefined,
+        format: (query.format as 'csv' | 'excel') || 'csv',
       },
       res
     );

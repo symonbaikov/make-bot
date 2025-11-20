@@ -118,4 +118,3 @@ git push origin main
 1. Перейдите в "Deployments"
 2. Найдите нужную версию
 3. Нажмите "..." → "Promote to Production"
-

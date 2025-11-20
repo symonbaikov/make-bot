@@ -1,4 +1,4 @@
-import { PrismaClient, Action, ActionType } from '@prisma/client';
+import { Prisma, ActionType } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 
 export class ActionService {
@@ -7,18 +7,18 @@ export class ActionService {
     ref?: string;
     sessionId?: string;
     payload?: Record<string, unknown>;
-  }): Promise<Action> {
+  }): Promise<Prisma.ActionGetPayload<Record<string, never>>> {
     return prisma.action.create({
       data: {
         type: data.type,
         ref: data.ref,
         sessionId: data.sessionId,
-        payload: data.payload || {},
+        payload: (data.payload || {}) as Prisma.InputJsonValue,
       },
     });
   }
 
-  async findBySessionId(sessionId: string): Promise<Action[]> {
+  async findBySessionId(sessionId: string): Promise<Prisma.ActionGetPayload<Record<string, never>>[]> {
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
     });
@@ -41,7 +41,18 @@ export class ActionService {
     startDate?: Date;
     endDate?: Date;
   }): Promise<{
-    data: Action[];
+    data: Prisma.ActionGetPayload<{
+      include: {
+        session: {
+          select: {
+            id: true;
+            sessionId: true;
+            plan: true;
+            status: true;
+          };
+        };
+      };
+    }>[];
     total: number;
     page: number;
     limit: number;
@@ -51,7 +62,7 @@ export class ActionService {
     const limit = params.limit || 50;
     const skip = (page - 1) * limit;
 
-    const where: Record<string, unknown> = {};
+    const where: Prisma.ActionWhereInput = {};
 
     if (params.type) {
       where.type = params.type;
@@ -64,10 +75,10 @@ export class ActionService {
     if (params.startDate || params.endDate) {
       where.createdAt = {};
       if (params.startDate) {
-        where.createdAt.gte = params.startDate;
+        (where.createdAt as Prisma.DateTimeFilter).gte = params.startDate;
       }
       if (params.endDate) {
-        where.createdAt.lte = params.endDate;
+        (where.createdAt as Prisma.DateTimeFilter).lte = params.endDate;
       }
     }
 

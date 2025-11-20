@@ -48,7 +48,7 @@ router.use(authMiddleware);
 router.get(
   '/payments',
   validateQuery(listSessionsSchema),
-  adminController.listPayments
+  adminController.listPayments as any
 );
 
 // GET /api/admin/payments/:id
@@ -81,7 +81,7 @@ router.get('/stats', adminController.getStats);
 router.get(
   '/actions',
   validateQuery(listActionsSchema),
-  adminController.listActions
+  adminController.listActions as any
 );
 
 // POST /api/admin/sessions

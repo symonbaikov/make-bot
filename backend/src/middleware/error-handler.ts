@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import * as Sentry from '@sentry/node';
 import { AppError } from '../utils/errors';
 import { logger } from '../utils/logger';
 import { sendError } from '../utils/response';
@@ -9,7 +8,7 @@ export function errorHandler(
   err: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void {
   // Log error with context
   logger.error('Error occurred:', {

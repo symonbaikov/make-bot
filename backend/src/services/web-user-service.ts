@@ -1,4 +1,4 @@
-import { WebUser, Role } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { prisma } from '../utils/prisma';
@@ -8,7 +8,7 @@ import { emailService } from './email-service';
 import { logger } from '../utils/logger';
 
 export interface LoginResult {
-  user: Omit<WebUser, 'passwordHash'>;
+  user: Omit<Prisma.WebUserGetPayload<Record<string, never>>, 'passwordHash'>;
   token: string;
 }
 
@@ -81,7 +81,7 @@ async function getPool(): Promise<Pool> {
 }
 
 export class WebUserService {
-  async findByEmail(email: string): Promise<WebUser | null> {
+  async findByEmail(email: string): Promise<Prisma.WebUserGetPayload<Record<string, never>> | null> {
     try {
       return await prisma.webUser.findUnique({
         where: { email },
@@ -105,7 +105,7 @@ export class WebUserService {
     }
   }
 
-  async findById(id: string): Promise<WebUser | null> {
+  async findById(id: string): Promise<Prisma.WebUserGetPayload<Record<string, never>> | null> {
     return prisma.webUser.findUnique({
       where: { id },
     });
@@ -117,7 +117,7 @@ export class WebUserService {
     role?: Role;
     firstName?: string;
     lastName?: string;
-  }): Promise<Omit<WebUser, 'passwordHash'>> {
+  }): Promise<Omit<Prisma.WebUserGetPayload<Record<string, never>>, 'passwordHash'>> {
     const existingUser = await this.findByEmail(data.email);
     if (existingUser) {
       throw new ValidationError('User with this email already exists');
@@ -142,7 +142,7 @@ export class WebUserService {
 
   async login(email: string, password: string): Promise<LoginResult> {
     // Try Prisma first, fallback to direct SQL if needed
-    let user: WebUser | null = null;
+    let user: Prisma.WebUserGetPayload<Record<string, never>> | null = null;
 
     try {
       // Try Prisma first
@@ -291,7 +291,7 @@ export class WebUserService {
       firstName?: string;
       lastName?: string;
     }
-  ): Promise<Omit<WebUser, 'passwordHash'>> {
+  ): Promise<Omit<Prisma.WebUserGetPayload<Record<string, never>>, 'passwordHash'>> {
     const user = await this.findById(id);
     if (!user) {
       throw new NotFoundError('User');
@@ -306,7 +306,7 @@ export class WebUserService {
     return userWithoutPassword;
   }
 
-  async list(): Promise<Omit<WebUser, 'passwordHash'>[]> {
+  async list(): Promise<Omit<Prisma.WebUserGetPayload<Record<string, never>>, 'passwordHash'>[]> {
     const users = await prisma.webUser.findMany({
       orderBy: { createdAt: 'desc' },
     });

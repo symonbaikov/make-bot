@@ -1,5 +1,5 @@
 import { prisma } from '../utils/prisma';
-import { Plan, SessionStatus } from '@prisma/client';
+import { Prisma, Plan, SessionStatus } from '@prisma/client';
 
 export interface StatsParams {
   startDate?: Date;
@@ -30,15 +30,15 @@ export interface Stats {
 
 export class StatsService {
   async getStats(params: StatsParams = {}): Promise<Stats> {
-    const where: Record<string, unknown> = {};
+    const where: Prisma.SessionWhereInput = {};
 
     if (params.startDate || params.endDate) {
       where.createdAt = {};
       if (params.startDate) {
-        where.createdAt.gte = params.startDate;
+        (where.createdAt as Prisma.DateTimeFilter).gte = params.startDate;
       }
       if (params.endDate) {
-        where.createdAt.lte = params.endDate;
+        (where.createdAt as Prisma.DateTimeFilter).lte = params.endDate;
       }
     }
 
@@ -56,7 +56,7 @@ export class StatsService {
       },
     });
 
-    const totalRevenue = completedSessions.reduce((sum, session) => {
+    const totalRevenue = completedSessions.reduce((sum: number, session) => {
       return sum + Number(session.amount);
     }, 0);
 
@@ -75,7 +75,7 @@ export class StatsService {
       },
     });
 
-    const revenueByPlan = revenueByPlanData.map((item) => ({
+    const revenueByPlan = revenueByPlanData.map(item => ({
       plan: item.plan,
       count: item._count.id,
       revenue: Number(item._sum.amount || 0),
@@ -97,7 +97,7 @@ export class StatsService {
       completed: 0,
     };
 
-    funnelData.forEach((item) => {
+    funnelData.forEach((item: { status: SessionStatus; _count: { id: number } }) => {
       const count = item._count.id;
       switch (item.status) {
         case SessionStatus.STARTED:
@@ -120,11 +120,13 @@ export class StatsService {
     const trendsStartDate = params.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const trendsEndDate = params.endDate || new Date();
 
-    const trendsData = await prisma.$queryRaw<Array<{
-      date: Date;
-      sessions: bigint;
-      revenue: bigint;
-    }>>`
+    const trendsData = await prisma.$queryRaw<
+      Array<{
+        date: Date;
+        sessions: bigint;
+        revenue: bigint;
+      }>
+    >`
       SELECT 
         DATE(created_at) as date,
         COUNT(*)::bigint as sessions,
@@ -136,7 +138,7 @@ export class StatsService {
       ORDER BY date ASC
     `;
 
-    const trends = trendsData.map((item) => ({
+    const trends = trendsData.map((item: { date: Date; sessions: bigint; revenue: bigint }) => ({
       date: item.date.toISOString().split('T')[0],
       sessions: Number(item.sessions),
       revenue: Number(item.revenue),
@@ -160,4 +162,3 @@ export class StatsService {
 }
 
 export const statsService = new StatsService();
-

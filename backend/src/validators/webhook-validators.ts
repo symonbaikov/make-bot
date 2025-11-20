@@ -27,4 +27,3 @@ export const paypalWebhookSchema = z.object({
 
 export type BotWebhookInput = z.infer<typeof botWebhookSchema>;
 export type PayPalWebhookInput = z.infer<typeof paypalWebhookSchema>;
-

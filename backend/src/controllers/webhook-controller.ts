@@ -4,7 +4,7 @@ import { makeService } from '../services/make-service';
 import { sendSuccess } from '../utils/response';
 import { asyncHandler } from '../middleware/async-handler';
 import { BotWebhookInput, PayPalWebhookInput } from '../validators/webhook-validators';
-import { SessionStatus } from '@prisma/client';
+import { Plan, SessionStatus } from '@prisma/client';
 import { logger } from '../utils/logger';
 
 export class WebhookController {
@@ -17,26 +17,26 @@ export class WebhookController {
 
     // Upsert session with email
     const session = await sessionService.upsertBySessionId({
-      sessionId: data.sessionId,
-      plan: data.plan,
-      amount: data.amount,
-      emailUser: data.email,
-      tgUserId: data.tgUserId,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      phoneNumber: data.phoneNumber,
+      sessionId: data.sessionId as string,
+      plan: data.plan as Plan,
+      amount: data.amount as number,
+      emailUser: data.email as string | undefined,
+      tgUserId: data.tgUserId as string | undefined,
+      firstName: data.firstName as string | undefined,
+      lastName: data.lastName as string | undefined,
+      phoneNumber: data.phoneNumber as string | undefined,
     });
 
     // Send webhook to Make
     await makeService.sendBotWebhook({
-      sessionId: data.sessionId,
-      email: data.email,
-      tgUserId: data.tgUserId,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      phoneNumber: data.phoneNumber,
-      plan: data.plan,
-      amount: data.amount,
+      sessionId: data.sessionId as string,
+      email: data.email as string,
+      tgUserId: data.tgUserId as string,
+      firstName: data.firstName as string | undefined,
+      lastName: data.lastName as string | undefined,
+      phoneNumber: data.phoneNumber as string | undefined,
+      plan: data.plan as string,
+      amount: data.amount as number,
     });
 
     sendSuccess(res, {
@@ -75,7 +75,7 @@ export class WebhookController {
       ? new Date(data.paymentDate) 
       : data.paymentDate;
 
-    let status = SessionStatus.PAID;
+    let status: SessionStatus = SessionStatus.PAID;
     if (data.status === 'pending') {
       status = SessionStatus.PAID;
     } else if (data.status === 'refunded') {
