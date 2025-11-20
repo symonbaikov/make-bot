@@ -83,7 +83,17 @@ async function initializeDatabase(): Promise<void> {
     if (process.env.NODE_ENV === 'production') {
       // In production, if DATABASE_URL is set but invalid, try to use it anyway
       // Railway and other platforms may provide valid URLs that don't pass strict validation
-      if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('host:port')) {
+      // Check if DATABASE_URL contains placeholder values
+      const dbUrlLower = (process.env.DATABASE_URL || '').toLowerCase();
+      const hasPlaceholder = 
+        dbUrlLower.includes('host:port') ||
+        dbUrlLower.includes('username:password') ||
+        dbUrlLower.includes('user:password') ||
+        dbUrlLower.includes('database_name') ||
+        dbUrlLower.includes('@host:') ||
+        dbUrlLower.includes(':port/');
+      
+      if (process.env.DATABASE_URL && !hasPlaceholder) {
         logger.warn(
           'DATABASE_URL may not pass strict validation, but using it anyway in production',
           {
