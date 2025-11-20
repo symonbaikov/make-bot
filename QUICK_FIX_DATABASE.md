@@ -35,16 +35,28 @@
    railway run npm run db:seed
    ```
 
-### Вариант 2: Локально с DATABASE_URL из Railway
+### Вариант 2: Локально с публичным DATABASE_URL из Railway (РЕКОМЕНДУЕТСЯ)
 
-1. **Получите DATABASE_URL:**
-   - Откройте Railway → PostgreSQL сервис → Variables
-   - Скопируйте значение `DATABASE_URL`
+1. **Получите публичный DATABASE_URL:**
+   - Откройте Railway → PostgreSQL сервис → **Connect** (кнопка с молнией)
+   - Выберите **Public Network** → **TCP Proxy**
+   - Railway создаст публичный URL типа: `postgres.railway.app:5432`
+   - Или используйте **Connection String** из PostgreSQL → Variables
+   - **ВАЖНО:** Используйте публичный URL, а не `postgres.railway.internal`
 
-2. **Примените миграции локально:**
+2. **Соберите полный DATABASE_URL:**
+   ```
+   postgresql://postgres:PASSWORD@PUBLIC_HOST:PORT/railway
+   ```
+   Где:
+   - `PASSWORD` - пароль из PostgreSQL → Variables → `POSTGRES_PASSWORD`
+   - `PUBLIC_HOST` - публичный хост (например, `postgres.railway.app`)
+   - `PORT` - порт (обычно `5432`)
+
+3. **Примените миграции локально:**
    ```bash
    cd backend
-   export DATABASE_URL="postgresql://..." # Вставьте DATABASE_URL из Railway
+   export DATABASE_URL="postgresql://postgres:PASSWORD@PUBLIC_HOST:PORT/railway"
    npx prisma db push --skip-generate --accept-data-loss
    npm run db:seed
    ```
