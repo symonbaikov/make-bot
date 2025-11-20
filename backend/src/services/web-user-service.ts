@@ -30,7 +30,9 @@ async function initializePool(): Promise<void> {
       pool = new Pool({
         connectionString: process.env.DATABASE_URL,
         connectionTimeoutMillis: 10000,
-        ssl: process.env.DATABASE_URL.includes('sslmode=require') ? { rejectUnauthorized: false } : undefined,
+        ssl: process.env.DATABASE_URL.includes('sslmode=require')
+          ? { rejectUnauthorized: false }
+          : undefined,
       });
 
       // Test connection
@@ -102,7 +104,9 @@ async function getPool(): Promise<Pool> {
 }
 
 export class WebUserService {
-  async findByEmail(email: string): Promise<Prisma.WebUserGetPayload<Record<string, never>> | null> {
+  async findByEmail(
+    email: string
+  ): Promise<Prisma.WebUserGetPayload<Record<string, never>> | null> {
     try {
       return await prisma.webUser.findUnique({
         where: { email },

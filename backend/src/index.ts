@@ -31,15 +31,32 @@ async function initializeDatabase(): Promise<void> {
       /user:.*@host:port/,
       /postgresql:\/\/user:/,
       /postgresql:\/\/.*@host:/,
+      /@host:port/,
+      /host:port/,
+      /:\/\/.*@host:/,
+      /:\/\/user:.*@host/,
     ];
 
+    const dbUrl = process.env.DATABASE_URL.toLowerCase();
     for (const pattern of placeholderPatterns) {
-      if (pattern.test(process.env.DATABASE_URL)) {
+      if (pattern.test(dbUrl)) {
         logger.warn('DATABASE_URL contains placeholder, will auto-detect', {
           databaseUrl: process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@'),
         });
         return false;
       }
+    }
+
+    // Also check for literal placeholder strings
+    if (
+      dbUrl.includes('host:port') ||
+      dbUrl.includes('user:password') ||
+      (dbUrl.includes('host') && dbUrl.includes('port') && !dbUrl.match(/\d+\.\d+\.\d+\.\d+/))
+    ) {
+      logger.warn('DATABASE_URL appears to be a template/placeholder, will auto-detect', {
+        databaseUrl: process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@'),
+      });
+      return false;
     }
 
     // Validate URL format
@@ -67,9 +84,12 @@ async function initializeDatabase(): Promise<void> {
       // In production, if DATABASE_URL is set but invalid, try to use it anyway
       // Railway and other platforms may provide valid URLs that don't pass strict validation
       if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('host:port')) {
-        logger.warn('DATABASE_URL may not pass strict validation, but using it anyway in production', {
-          databaseUrl: process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@'),
-        });
+        logger.warn(
+          'DATABASE_URL may not pass strict validation, but using it anyway in production',
+          {
+            databaseUrl: process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@'),
+          }
+        );
         // Accept the DATABASE_URL as-is in production
       } else {
         // In production, DATABASE_URL must be set
@@ -94,7 +114,9 @@ async function initializeDatabase(): Promise<void> {
           // Use fallback if detection fails (only in development)
           process.env.DATABASE_URL =
             'postgresql://makebot:makebot123@127.0.0.1:5433/make_bot?schema=public';
-          logger.warn('⚠️ Database detection failed, using fallback connection (Docker PostgreSQL)');
+          logger.warn(
+            '⚠️ Database detection failed, using fallback connection (Docker PostgreSQL)'
+          );
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);

@@ -40,35 +40,58 @@ async function testConnection(config: {
  * Tries Docker PostgreSQL (5433) first, then local PostgreSQL (5432)
  */
 export async function detectDatabaseConnection(): Promise<DatabaseConfig | null> {
-  // Priority 1: Use DATABASE_URL if provided
+  // Priority 1: Use DATABASE_URL if provided and valid
   if (process.env.DATABASE_URL) {
-    try {
-      const url = new URL(process.env.DATABASE_URL);
-      const config: DatabaseConfig = {
-        host: url.hostname,
-        port: url.port ? parseInt(url.port) : 5432,
-        user: url.username,
-        password: url.password,
-        database: url.pathname.slice(1).split('?')[0],
-        connectionString: process.env.DATABASE_URL,
-      };
+    // Skip if DATABASE_URL looks like a placeholder
+    const dbUrl = process.env.DATABASE_URL.toLowerCase();
+    const isPlaceholder =
+      dbUrl.includes('host:port') ||
+      dbUrl.includes('user:password') ||
+      (dbUrl.includes('host') && dbUrl.includes('port') && !dbUrl.match(/\d+\.\d+\.\d+\.\d+/));
 
-      logger.info('Testing DATABASE_URL connection...', {
-        host: config.host,
-        port: config.port,
-        database: config.database,
-      });
+    if (!isPlaceholder) {
+      try {
+        const url = new URL(process.env.DATABASE_URL);
+        const config: DatabaseConfig = {
+          host: url.hostname,
+          port: url.port ? parseInt(url.port) : 5432,
+          user: url.username,
+          password: url.password,
+          database: url.pathname.slice(1).split('?')[0] || 'postgres',
+          connectionString: process.env.DATABASE_URL,
+        };
 
-      if (await testConnection(config)) {
-        logger.info('✅ DATABASE_URL connection successful');
-        return config;
-      } else {
-        logger.warn('⚠️ DATABASE_URL connection failed, trying fallback options...');
+        // Validate that we have actual values, not placeholders
+        if (
+          config.host &&
+          config.host !== 'host' &&
+          config.user &&
+          config.user !== 'user' &&
+          config.database &&
+          config.database !== 'database'
+        ) {
+          logger.info('Testing DATABASE_URL connection...', {
+            host: config.host,
+            port: config.port,
+            database: config.database,
+          });
+
+          if (await testConnection(config)) {
+            logger.info('✅ DATABASE_URL connection successful');
+            return config;
+          } else {
+            logger.warn('⚠️ DATABASE_URL connection failed, trying fallback options...');
+          }
+        } else {
+          logger.warn('⚠️ DATABASE_URL contains placeholder values, skipping...');
+        }
+      } catch (error) {
+        logger.warn('⚠️ Failed to parse DATABASE_URL, trying fallback options...', {
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
-    } catch (error) {
-      logger.warn('⚠️ Failed to parse DATABASE_URL, trying fallback options...', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+    } else {
+      logger.info('DATABASE_URL appears to be a placeholder, skipping and using auto-detection...');
     }
   }
 
