@@ -23,22 +23,46 @@ if [ ! -d "node_modules/.prisma/client" ] || [ ! -f "node_modules/.prisma/client
 fi
 
 # Run Prisma migrations/push
+echo "=========================================="
 echo "Running database migrations..."
+echo "=========================================="
 echo "DATABASE_URL is set: $(if [ -n "$DATABASE_URL" ]; then echo 'yes'; else echo 'no'; fi)"
 echo "Current directory: $(pwd)"
 echo "Prisma schema location: $(ls -la prisma/schema.prisma 2>/dev/null || echo 'NOT FOUND')"
+echo "Prisma directory contents:"
+ls -la prisma/ 2>/dev/null || echo "prisma directory not found!"
+
+# Check if DATABASE_URL is set
+if [ -z "$DATABASE_URL" ]; then
+  echo "ERROR: DATABASE_URL is not set! Cannot apply migrations."
+  echo "Please set DATABASE_URL environment variable in Railway."
+  exit 1
+fi
 
 # Use db push (more reliable for Railway, creates tables from schema)
 echo "Applying database schema with db push..."
-npx prisma db push --skip-generate --accept-data-loss || {
+echo "DATABASE_URL preview: $(echo "$DATABASE_URL" | sed 's/:[^:@]*@/:****@/')"
+
+# Run prisma db push with verbose output
+npx prisma db push --skip-generate --accept-data-loss --verbose || {
+  echo "=========================================="
   echo "ERROR: Database push failed!"
-  echo "DATABASE_URL preview: $(echo "$DATABASE_URL" | cut -c1-50)..."
+  echo "=========================================="
+  echo "DATABASE_URL preview: $(echo "$DATABASE_URL" | sed 's/:[^:@]*@/:****@/')"
   echo "Checking Prisma schema..."
   ls -la prisma/ || echo "prisma directory not found"
+  echo "Checking node_modules..."
+  ls -la node_modules/.bin/prisma 2>/dev/null || echo "prisma binary not found"
+  echo "Trying to test database connection..."
+  node -e "const { Client } = require('pg'); const client = new Client(process.env.DATABASE_URL); client.connect().then(() => { console.log('Connection OK'); client.end(); }).catch(e => { console.log('Connection failed:', e.message); process.exit(1); });" || {
+    echo "Database connection test failed!"
+  }
   exit 1
 }
 
+echo "=========================================="
 echo "✅ Database schema applied successfully!"
+echo "=========================================="
 
 # Run seed to create admin user
 if [ -n "$DATABASE_URL" ]; then
