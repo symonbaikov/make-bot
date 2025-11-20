@@ -38,8 +38,14 @@ RUN test -f tsconfig.json || (echo "ERROR: tsconfig.json not found!" && exit 1)
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
+# Cache busting: Add build timestamp to force rebuild of frontend files
+# This ensures Railway always gets the latest version of source files
+ARG BUILD_TIMESTAMP
+RUN echo "Build timestamp: ${BUILD_TIMESTAMP:-$(date +%s)}" > /tmp/build-info.txt && \
+    cat /tmp/build-info.txt
+
 # Copy frontend directory with all files (source, configs, etc.)
-# Note: This layer will be cached by Docker. To force rebuild, change this comment.
+# This layer will be rebuilt if BUILD_TIMESTAMP changes or files change
 COPY frontend ./frontend
 
 # Verify frontend source exists
