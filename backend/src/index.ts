@@ -346,26 +346,63 @@ function startServer() {
   // Serve static files from frontend build (in production)
   // In development, frontend is served by Vite dev server
   if (process.env.NODE_ENV === 'production') {
-    // In CommonJS, __dirname is available
-    const frontendDistPath = path.join(__dirname, '../../frontend/dist');
+    // In CommonJS, __dirname points to /app/dist (compiled backend)
+    // Frontend dist is at /app/frontend/dist
+    const frontendDistPath = path.join(__dirname, '../frontend/dist');
+    const indexHtmlPath = path.join(frontendDistPath, 'index.html');
 
-    // Serve static assets (JS, CSS, images, etc.)
-    app.use(
-      express.static(frontendDistPath, {
-        maxAge: '1y', // Cache static assets for 1 year
-        etag: true,
-      })
-    );
-
-    // SPA routing: serve index.html for all non-API routes
-    app.get('*', (req, res, next) => {
-      // Skip API routes
-      if (req.path.startsWith('/api')) {
-        return next();
-      }
-      // Serve index.html for all other routes (SPA routing)
-      res.sendFile(path.join(frontendDistPath, 'index.html'));
+    // Log frontend path for debugging
+    logger.info('Setting up static file serving', {
+      frontendDistPath,
+      indexHtmlPath,
+      __dirname,
+      exists: require('fs').existsSync(frontendDistPath),
+      indexExists: require('fs').existsSync(indexHtmlPath),
     });
+
+    // Check if frontend dist exists
+    if (!require('fs').existsSync(frontendDistPath)) {
+      logger.error('❌ Frontend dist directory not found!', {
+        frontendDistPath,
+        __dirname,
+        cwd: process.cwd(),
+      });
+    } else if (!require('fs').existsSync(indexHtmlPath)) {
+      logger.error('❌ Frontend index.html not found!', {
+        indexHtmlPath,
+        frontendDistPath,
+        files: require('fs').readdirSync(frontendDistPath),
+      });
+    } else {
+      logger.info('✅ Frontend dist found, serving static files');
+
+      // Serve static assets (JS, CSS, images, etc.)
+      app.use(
+        express.static(frontendDistPath, {
+          maxAge: '1y', // Cache static assets for 1 year
+          etag: true,
+        })
+      );
+
+      // SPA routing: serve index.html for all non-API routes
+      app.get('*', (req, res, next) => {
+        // Skip API routes
+        if (req.path.startsWith('/api')) {
+          return next();
+        }
+        // Serve index.html for all other routes (SPA routing)
+        res.sendFile(indexHtmlPath, (err) => {
+          if (err) {
+            logger.error('Failed to send index.html', {
+              error: err.message,
+              path: req.path,
+              indexHtmlPath,
+            });
+            next(err);
+          }
+        });
+      });
+    }
   }
 
   // 404 handler for API routes only
