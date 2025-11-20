@@ -85,14 +85,14 @@ async function initializeDatabase(): Promise<void> {
       // Railway and other platforms may provide valid URLs that don't pass strict validation
       // Check if DATABASE_URL contains placeholder values
       const dbUrlLower = (process.env.DATABASE_URL || '').toLowerCase();
-      const hasPlaceholder = 
+      const hasPlaceholder =
         dbUrlLower.includes('host:port') ||
         dbUrlLower.includes('username:password') ||
         dbUrlLower.includes('user:password') ||
         dbUrlLower.includes('database_name') ||
         dbUrlLower.includes('@host:') ||
         dbUrlLower.includes(':port/');
-      
+
       if (process.env.DATABASE_URL && !hasPlaceholder) {
         logger.warn(
           'DATABASE_URL may not pass strict validation, but using it anyway in production',
