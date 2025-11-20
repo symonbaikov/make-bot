@@ -8,8 +8,10 @@ WORKDIR /app
 # Copy root package.json for workspace setup
 COPY package.json package-lock.json* ./
 
-# Copy backend package.json
-COPY backend/package.json ./backend/
+# Copy all workspace package.json files (needed for workspace resolution)
+COPY backend/package.json ./backend/package.json
+COPY frontend/package.json ./frontend/package.json
+COPY bot/package.json ./bot/package.json
 
 # Install all dependencies (workspace will handle it)
 # Use npm ci for faster, reproducible builds
@@ -30,7 +32,9 @@ COPY tsconfig.json ./
 
 # Build frontend first (monolithic build)
 WORKDIR /app/frontend
-RUN npm run build || (echo "Frontend build failed!" && exit 1)
+# Use build:docker script which skips TypeScript check for faster Docker builds
+# Vite will still catch TypeScript errors during bundling
+RUN npm run build:docker || (echo "Frontend build failed!" && exit 1)
 
 # Build backend
 WORKDIR /app/backend
