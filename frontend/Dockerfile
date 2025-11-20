@@ -38,6 +38,10 @@ RUN test -f tsconfig.json || (echo "ERROR: tsconfig.json not found!" && exit 1)
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
+# Build arg to force cache invalidation when needed
+ARG BUILD_DATE=unknown
+RUN echo "Build date: ${BUILD_DATE}"
+
 # Copy frontend directory with all files (source, configs, etc.)
 COPY frontend ./frontend
 
