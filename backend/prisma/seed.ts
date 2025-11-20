@@ -22,9 +22,11 @@ async function main() {
 
   console.log('Created admin user:', admin.email);
 
-  // Create test session
-  const session = await prisma.session.create({
-    data: {
+  // Create test session (use upsert to avoid duplicate errors)
+  const session = await prisma.session.upsert({
+    where: { sessionId: 'test-session-001' },
+    update: {},
+    create: {
       sessionId: 'test-session-001',
       plan: Plan.STANDARD,
       amount: 99.99,
@@ -33,20 +35,32 @@ async function main() {
     },
   });
 
-  console.log('Created test session:', session.sessionId);
+  console.log('Created/updated test session:', session.sessionId);
 
-  // Create test action
-  await prisma.action.create({
-    data: {
-      type: ActionType.SESSION_CREATED,
+  // Create test action (only if doesn't exist)
+  const existingAction = await prisma.action.findFirst({
+    where: {
       ref: session.sessionId,
-      sessionId: session.id,
-      payload: {
-        source: 'seed',
-        test: true,
-      },
+      type: ActionType.SESSION_CREATED,
     },
   });
+
+  if (!existingAction) {
+    await prisma.action.create({
+      data: {
+        type: ActionType.SESSION_CREATED,
+        ref: session.sessionId,
+        sessionId: session.id,
+        payload: {
+          source: 'seed',
+          test: true,
+        },
+      },
+    });
+    console.log('Created test action');
+  } else {
+    console.log('Test action already exists, skipping');
+  }
 
   console.log('Seeding completed!');
 }
