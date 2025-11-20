@@ -12,7 +12,27 @@ Current DATABASE_URL value: postgresql://username:password@host:port/database_na
 
 ## ✅ Решение
 
-### Вариант 1: Использовать существующий PostgreSQL сервис
+### Вариант 1: Создать PostgreSQL сервис в Railway (РЕКОМЕНДУЕТСЯ)
+
+Если у вас нет PostgreSQL сервиса в Railway, создайте его:
+
+1. **Откройте Railway** → ваш проект (`mindful-enthusiasm`)
+2. **Нажмите "+ New"** (кнопка в правом верхнем углу или внизу списка сервисов)
+3. **Выберите "Database"** → **"Add PostgreSQL"**
+4. Railway автоматически создаст PostgreSQL сервис
+5. **Дождитесь завершения создания** (может занять 1-2 минуты)
+6. **Откройте созданный PostgreSQL сервис** → **Variables**
+7. **Найдите переменную `DATABASE_URL`** или `POSTGRES_URL`
+8. **Скопируйте значение** (оно будет выглядеть примерно так):
+   ```
+   postgresql://postgres:actual_password@containers-us-west-xxx.railway.app:5432/railway
+   ```
+9. **Откройте Backend сервис** (`@make-bot/backend`)
+10. **Перейдите в Variables**
+11. **Создайте переменную `DATABASE_URL`** и вставьте скопированное значение
+12. **Сохраните**
+
+### Вариант 2: Использовать существующий PostgreSQL сервис
 
 1. **Откройте Railway** → ваш проект
 2. **Найдите PostgreSQL сервис** в списке сервисов

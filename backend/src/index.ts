@@ -62,8 +62,9 @@ async function initializeDatabase(): Promise<void> {
     for (const keyword of placeholderKeywords) {
       if (dbUrl.includes(keyword)) {
         // Additional check: if it's a real IP address or domain, it's not a placeholder
-        const hasRealHost = /@[\d.]+:/.test(process.env.DATABASE_URL) || 
-                           /@[a-z0-9.-]+\.[a-z]{2,}:/i.test(process.env.DATABASE_URL);
+        const hasRealHost =
+          /@[\d.]+:/.test(process.env.DATABASE_URL) ||
+          /@[a-z0-9.-]+\.[a-z]{2,}:/i.test(process.env.DATABASE_URL);
         if (!hasRealHost) {
           logger.warn('DATABASE_URL appears to be a template/placeholder, will auto-detect', {
             databaseUrl: process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@'),
