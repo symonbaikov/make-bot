@@ -64,42 +64,46 @@ async function initializeDatabase(): Promise<void> {
   // Auto-detect if DATABASE_URL is not set or invalid
   if (!hasValidDatabaseUrl()) {
     if (process.env.NODE_ENV === 'production') {
-      // In production, DATABASE_URL must be set
-      throw new Error(
-        'DATABASE_URL is required in production mode. Please set the DATABASE_URL environment variable.'
-      );
-    }
-    
-    try {
-      logger.info('Auto-detecting database connection...');
-      const { detectDatabaseConnection } = await import('./utils/db-connection');
-      const config = await detectDatabaseConnection();
-      if (config) {
-        process.env.DATABASE_URL = config.connectionString;
-        logger.info('✅ Auto-detected database connection and set DATABASE_URL', {
-          host: config.host,
-          port: config.port,
-          database: config.database,
+      // In production, if DATABASE_URL is set but invalid, try to use it anyway
+      // Railway and other platforms may provide valid URLs that don't pass strict validation
+      if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('host:port')) {
+        logger.warn('DATABASE_URL may not pass strict validation, but using it anyway in production', {
+          databaseUrl: process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@'),
         });
+        // Accept the DATABASE_URL as-is in production
       } else {
-        // Use fallback if detection fails (only in development)
-        process.env.DATABASE_URL =
-          'postgresql://makebot:makebot123@127.0.0.1:5433/make_bot?schema=public';
-        logger.warn('⚠️ Database detection failed, using fallback connection (Docker PostgreSQL)');
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.warn('⚠️ Failed to auto-detect database connection, using fallback', {
-        error: errorMessage,
-      });
-      // Only use fallback in development
-      if (process.env.NODE_ENV !== 'production') {
-        process.env.DATABASE_URL =
-          'postgresql://makebot:makebot123@127.0.0.1:5433/make_bot?schema=public';
-      } else {
+        // In production, DATABASE_URL must be set
         throw new Error(
-          `Failed to auto-detect database connection: ${errorMessage}. DATABASE_URL must be set in production.`
+          'DATABASE_URL is required in production mode. Please set the DATABASE_URL environment variable.'
         );
+      }
+    } else {
+      // Development: try auto-detection
+      try {
+        logger.info('Auto-detecting database connection...');
+        const { detectDatabaseConnection } = await import('./utils/db-connection');
+        const config = await detectDatabaseConnection();
+        if (config) {
+          process.env.DATABASE_URL = config.connectionString;
+          logger.info('✅ Auto-detected database connection and set DATABASE_URL', {
+            host: config.host,
+            port: config.port,
+            database: config.database,
+          });
+        } else {
+          // Use fallback if detection fails (only in development)
+          process.env.DATABASE_URL =
+            'postgresql://makebot:makebot123@127.0.0.1:5433/make_bot?schema=public';
+          logger.warn('⚠️ Database detection failed, using fallback connection (Docker PostgreSQL)');
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.warn('⚠️ Failed to auto-detect database connection, using fallback', {
+          error: errorMessage,
+        });
+        // Only use fallback in development
+        process.env.DATABASE_URL =
+          'postgresql://makebot:makebot123@127.0.0.1:5433/make_bot?schema=public';
       }
     }
   }
@@ -109,23 +113,43 @@ async function initializeDatabase(): Promise<void> {
     throw new Error('DATABASE_URL is not set and could not be auto-detected');
   }
 
-  // Validate connection string format
+  // Validate connection string format (more lenient in production)
   try {
     const url = new URL(process.env.DATABASE_URL);
-    if (!url.port || isNaN(parseInt(url.port))) {
-      throw new Error(`Invalid port in DATABASE_URL: ${url.port}`);
+    // In production, be more lenient - some providers may use default ports
+    if (process.env.NODE_ENV === 'production') {
+      // Just check that it's a valid URL format
+      logger.info('✅ DATABASE_URL format validated (production mode)', {
+        host: url.hostname,
+        port: url.port || 'default',
+        database: url.pathname.split('/')[1]?.split('?')[0] || 'unknown',
+      });
+    } else {
+      // In development, be more strict
+      if (!url.port || isNaN(parseInt(url.port))) {
+        throw new Error(`Invalid port in DATABASE_URL: ${url.port}`);
+      }
+      logger.info('✅ DATABASE_URL validated successfully', {
+        host: url.hostname,
+        port: url.port,
+        database: url.pathname.split('/')[1]?.split('?')[0],
+      });
     }
-    logger.info('✅ DATABASE_URL validated successfully', {
-      host: url.hostname,
-      port: url.port,
-      database: url.pathname.split('/')[1]?.split('?')[0],
-    });
   } catch (error) {
-    logger.error('❌ Invalid DATABASE_URL format', {
-      error: error instanceof Error ? error.message : String(error),
-      databaseUrl: process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@'),
-    });
-    throw error;
+    // In production, log warning but don't fail if URL format is slightly off
+    if (process.env.NODE_ENV === 'production' && process.env.DATABASE_URL) {
+      logger.warn('⚠️ DATABASE_URL format validation warning (but will try to use it)', {
+        error: error instanceof Error ? error.message : String(error),
+        databaseUrl: process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@'),
+      });
+      // Continue - let Prisma/PostgreSQL handle the connection
+    } else {
+      logger.error('❌ Invalid DATABASE_URL format', {
+        error: error instanceof Error ? error.message : String(error),
+        databaseUrl: process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@'),
+      });
+      throw error;
+    }
   }
 }
 
@@ -190,8 +214,8 @@ function startServer() {
   const allowedOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
     : process.env.NODE_ENV === 'production'
-    ? [] // Same-origin in production (monolithic app)
-    : ['http://localhost:5173', 'http://localhost:3000'];
+      ? [] // Same-origin in production (monolithic app)
+      : ['http://localhost:5173', 'http://localhost:3000'];
 
   const corsOptions = {
     origin: (
@@ -269,12 +293,14 @@ function startServer() {
   if (process.env.NODE_ENV === 'production') {
     // In CommonJS, __dirname is available
     const frontendDistPath = path.join(__dirname, '../../frontend/dist');
-    
+
     // Serve static assets (JS, CSS, images, etc.)
-    app.use(express.static(frontendDistPath, {
-      maxAge: '1y', // Cache static assets for 1 year
-      etag: true,
-    }));
+    app.use(
+      express.static(frontendDistPath, {
+        maxAge: '1y', // Cache static assets for 1 year
+        etag: true,
+      })
+    );
 
     // SPA routing: serve index.html for all non-API routes
     app.get('*', (req, res, next) => {

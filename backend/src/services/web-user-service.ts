@@ -24,6 +24,27 @@ async function initializePool(): Promise<void> {
   if (pool) return; // Already initialized
 
   try {
+    // In production, use DATABASE_URL directly if available
+    if (process.env.NODE_ENV === 'production' && process.env.DATABASE_URL) {
+      logger.info('Using DATABASE_URL for production database connection');
+      pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        connectionTimeoutMillis: 10000,
+        ssl: process.env.DATABASE_URL.includes('sslmode=require') ? { rejectUnauthorized: false } : undefined,
+      });
+
+      // Test connection
+      try {
+        await pool.query('SELECT 1');
+        logger.info('✅ Production database connection successful');
+      } catch (testError) {
+        logger.error('Failed to connect to production database', { error: testError });
+        throw testError;
+      }
+      return;
+    }
+
+    // Development: try auto-detection
     const { detectDatabaseConnection } = await import('../utils/db-connection');
     const config = await detectDatabaseConnection();
 
