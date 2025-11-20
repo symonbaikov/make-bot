@@ -8,7 +8,10 @@ import { toast } from 'react-toastify';
 
 const resetPasswordSchema = z.object({
   email: z.string().email('Невірна адреса електронної пошти'),
-  code: z.string().length(6, 'Код повинен містити 6 цифр').regex(/^\d+$/, 'Код повинен містити тільки цифри'),
+  code: z
+    .string()
+    .length(6, 'Код повинен містити 6 цифр')
+    .regex(/^\d+$/, 'Код повинен містити тільки цифри'),
 });
 
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
@@ -56,9 +59,7 @@ export function ResetPassword() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Вхід по коду
-          </h2>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Вхід по коду</h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Введіть код, який було надіслано на вашу електронну пошту
           </p>
@@ -76,9 +77,7 @@ export function ResetPassword() {
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="Адреса електронної пошти"
               />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-              )}
+              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
             </div>
             <div>
               <label htmlFor="code" className="sr-only">
@@ -92,9 +91,7 @@ export function ResetPassword() {
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm text-center text-2xl tracking-widest"
                 placeholder="000000"
               />
-              {errors.code && (
-                <p className="mt-1 text-sm text-red-600">{errors.code.message}</p>
-              )}
+              {errors.code && <p className="mt-1 text-sm text-red-600">{errors.code.message}</p>}
             </div>
           </div>
 
@@ -110,18 +107,12 @@ export function ResetPassword() {
 
           <div className="flex items-center justify-between">
             <div className="text-sm">
-              <Link
-                to="/forgot-password"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
+              <Link to="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
                 Надіслати код ще раз
               </Link>
             </div>
             <div className="text-sm">
-              <Link
-                to="/login"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
+              <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
                 Повернутися до входу
               </Link>
             </div>
@@ -131,8 +122,3 @@ export function ResetPassword() {
     </div>
   );
 }
-
-
-
-
-
