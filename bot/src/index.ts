@@ -30,10 +30,12 @@ if (!BOT_TOKEN) {
 }
 
 // In production, webhook is required
-if (IS_PRODUCTION && !WEBHOOK_URL) {
+// But allow fallback to polling if explicitly disabled via env var
+if (IS_PRODUCTION && !WEBHOOK_URL && process.env.ALLOW_POLLING_IN_PRODUCTION !== 'true') {
   logger.error(
     'TELEGRAM_WEBHOOK_URL is required in production environment. ' +
-      'Please set TELEGRAM_WEBHOOK_URL environment variable.'
+      'Please set TELEGRAM_WEBHOOK_URL environment variable. ' +
+      'Or set ALLOW_POLLING_IN_PRODUCTION=true to use polling mode (not recommended).'
   );
   process.exit(1);
 }
