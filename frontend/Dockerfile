@@ -48,6 +48,15 @@ COPY frontend ./frontend
 # Verify frontend source exists
 RUN test -d frontend/src || (echo "ERROR: frontend/src directory not found!" && exit 1)
 
+# CRITICAL: Verify ResetPassword.tsx doesn't have apiService import
+# This forces Docker to rebuild if the file is incorrect
+RUN if grep -q "apiService" frontend/src/pages/ResetPassword.tsx; then \
+    echo "ERROR: ResetPassword.tsx still contains apiService import! File is outdated." && \
+    echo "File content:" && cat frontend/src/pages/ResetPassword.tsx | head -15 && \
+    exit 1; \
+fi && \
+echo "✓ ResetPassword.tsx verified - no apiService import found"
+
 # Build frontend
 WORKDIR /app/frontend
 ENV NODE_ENV=production
