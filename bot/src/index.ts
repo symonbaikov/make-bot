@@ -5,6 +5,7 @@ import { sessionMiddleware, BotContext } from './middleware/session-middleware';
 import { handleStart } from './handlers/start-handler';
 import { handleEmailInput } from './handlers/email-handler';
 import { handleFirstNameInput, handleLastNameInput } from './handlers/name-handler';
+import { handlePhoneNumberInput } from './handlers/phone-handler';
 import { handleHelp } from './handlers/help-handler';
 import { handleError } from './handlers/error-handler';
 import { logger } from './utils/logger';
@@ -63,6 +64,8 @@ bot.on('text', async ctx => {
     await handleFirstNameInput(ctx);
   } else if (ctx.session?.waitingForLastName) {
     await handleLastNameInput(ctx);
+  } else if (ctx.session?.waitingForPhoneNumber) {
+    await handlePhoneNumberInput(ctx);
   } else {
     // If not waiting for any data, suggest using /start
     await ctx.reply(

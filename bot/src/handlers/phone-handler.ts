@@ -1,7 +1,6 @@
 import { BotContext } from '../middleware/session-middleware';
 import { isValidPhoneNumber, normalizePhoneNumber } from '../utils/phone-validator';
 import { apiClient } from '../utils/api-client';
-import { getPayPalPaymentUrl } from '../utils/paypal';
 import { logger } from '../utils/logger';
 
 export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
@@ -58,9 +57,17 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
         throw new Error('Telegram user ID is missing');
       }
 
+      if (!ctx.session.sessionId) {
+        throw new Error('Session ID is missing');
+      }
+
+      if (!ctx.session.email) {
+        throw new Error('Email is missing');
+      }
+
       await apiClient.sendBotWebhook({
         sessionId: ctx.session.sessionId,
-        email: ctx.session.email!,
+        email: ctx.session.email,
         tgUserId: tgUserId,
         firstName: ctx.session.firstName,
         lastName: ctx.session.lastName,
@@ -69,7 +76,7 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
         amount: ctx.session.amount || 99.99,
       });
 
-      logger.info('All user data sent to backend successfully', {
+      logger.info('User data sent to backend successfully', {
         sessionId: ctx.session.sessionId,
         email: ctx.session.email,
         firstName: ctx.session.firstName,
@@ -78,24 +85,12 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
         userId: tgUserId,
       });
 
-      // Generate PayPal link
-      const paypalUrl = getPayPalPaymentUrl({
-        sessionId: ctx.session.sessionId,
-        plan: ctx.session.plan || 'STANDARD',
-        amount: ctx.session.amount || 99.99,
-        currency: ctx.session.currency,
-      });
-
       await ctx.reply(
-        `✅ Вся інформація отримана та збережена!\n\n` +
+        `✅ Дякуємо! Ваша інформація отримана та збережена.\n\n` +
         `📧 Email: ${ctx.session.email}\n` +
         `👤 Ім'я: ${ctx.session.firstName || ''} ${ctx.session.lastName || ''}\n` +
-        `📱 Телефон: ${ctx.session.phoneNumber}\n` +
-        `📋 ID сесії: ${ctx.session.sessionId}\n` +
-        `💰 План: ${ctx.session.plan}\n` +
-        `💵 Сума: $${ctx.session.amount}\n\n` +
-        `🔗 Посилання на оплату:\n${paypalUrl}\n\n` +
-        `Будь ласка, завершіть оплату, використовуючи посилання вище.`
+        `📱 Телефон: ${ctx.session.phoneNumber}\n\n` +
+        `Ми зв'яжемося з вами найближчим часом.`
       );
 
       // Clear session after successful processing
