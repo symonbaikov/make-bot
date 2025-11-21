@@ -137,14 +137,28 @@ async function startBot() {
         const startTime = Date.now();
         const updateId = req.body?.update_id;
 
+        // Log ALL webhook requests (even if body is empty)
+        logger.info('📥 Webhook request received', {
+          updateId,
+          hasBody: !!req.body,
+          bodyKeys: req.body ? Object.keys(req.body) : [],
+          message: req.body?.message?.text,
+          command: req.body?.message?.entities?.[0]?.type,
+          userId: req.body?.message?.from?.id,
+          timestamp: new Date().toISOString(),
+          headers: {
+            'content-type': req.headers['content-type'],
+            'user-agent': req.headers['user-agent'],
+          },
+        });
+
         try {
-          logger.info('📥 Webhook received', {
-            updateId,
-            message: req.body?.message?.text,
-            command: req.body?.message?.entities?.[0]?.type,
-            userId: req.body?.message?.from?.id,
-            timestamp: new Date().toISOString(),
-          });
+          if (!req.body || !req.body.update_id) {
+            logger.warn('⚠️ Invalid webhook request - missing body or update_id', {
+              body: req.body,
+            });
+            return res.sendStatus(200); // Return 200 to avoid Telegram retries
+          }
 
           await bot.handleUpdate(req.body);
 
@@ -192,12 +206,29 @@ async function startBot() {
 
           // Verify webhook was set correctly
           const webhookStatus = await bot.telegram.getWebhookInfo();
-          logger.info(`Webhook status:`, {
+          logger.info(`✅ Webhook status verified:`, {
             url: webhookStatus.url,
             pendingUpdateCount: webhookStatus.pending_update_count,
             lastErrorDate: webhookStatus.last_error_date,
             lastErrorMessage: webhookStatus.last_error_message,
+            maxConnections: webhookStatus.max_connections,
           });
+
+          // Warn if webhook has errors
+          if (webhookStatus.last_error_message) {
+            logger.error('❌ Webhook has errors!', {
+              lastErrorDate: webhookStatus.last_error_date,
+              lastErrorMessage: webhookStatus.last_error_message,
+              url: webhookStatus.url,
+            });
+          }
+
+          // Warn if there are pending updates
+          if (webhookStatus.pending_update_count > 0) {
+            logger.warn('⚠️ There are pending updates that were not delivered', {
+              pendingUpdateCount: webhookStatus.pending_update_count,
+            });
+          }
         } catch (error) {
           logger.error('❌ Failed to set webhook', {
             error: error instanceof Error ? error.message : String(error),
