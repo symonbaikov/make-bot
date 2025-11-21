@@ -132,6 +132,27 @@ async function startBot() {
         res.json({ status: 'ok', mode: 'webhook' });
       });
 
+      // Test endpoint to verify webhook is accessible
+      app.get('/webhook-test', async (_req, res) => {
+        try {
+          const webhookInfo = await bot.telegram.getWebhookInfo();
+          res.json({
+            status: 'ok',
+            webhook: {
+              url: webhookInfo.url,
+              pendingUpdates: webhookInfo.pending_update_count,
+              lastError: webhookInfo.last_error_message,
+              lastErrorDate: webhookInfo.last_error_date,
+            },
+          });
+        } catch (error) {
+          res.status(500).json({
+            status: 'error',
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      });
+
       // Webhook endpoint - use webhookCallback for proper request handling
       app.post('/webhook', async (req, res) => {
         const startTime = Date.now();
