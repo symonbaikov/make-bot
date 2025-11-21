@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+# Disable npm scripts to prevent workspace issues
+export npm_config_ignore_scripts=true
+
 echo "Starting backend service..."
 
 # Wait for database to be ready
