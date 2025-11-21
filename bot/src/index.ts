@@ -232,7 +232,22 @@ async function startBot() {
             return res.sendStatus(200); // Return 200 to avoid Telegram retries
           }
 
-          await bot.handleUpdate(req.body);
+          // Add detailed logging before handling update
+          logger.info('🔄 Processing update', {
+            updateId,
+            updateType: req.body.message ? 'message' : req.body.callback_query ? 'callback_query' : 'unknown',
+            messageText: req.body.message?.text,
+            command: req.body.message?.entities?.[0]?.type,
+            userId: req.body.message?.from?.id,
+          });
+
+          // Handle update with timeout to prevent hanging
+          const updatePromise = bot.handleUpdate(req.body);
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Update handling timeout after 10s')), 10000);
+          });
+
+          await Promise.race([updatePromise, timeoutPromise]);
 
           const processingTime = Date.now() - startTime;
           logger.info('✅ Webhook processed successfully', {
