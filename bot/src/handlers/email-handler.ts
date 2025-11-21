@@ -2,10 +2,6 @@ import { BotContext } from '../middleware/session-middleware';
 import { isValidEmail, normalizeEmail } from '../utils/email-validator';
 import { logger } from '../utils/logger';
 
-import { BotContext } from '../middleware/session-middleware';
-import { isValidEmail, normalizeEmail } from '../utils/email-validator';
-import { logger } from '../utils/logger';
-
 export async function handleEmailInput(ctx: BotContext): Promise<void> {
   try {
     const startTime = Date.now();
