@@ -37,13 +37,13 @@ export function getPayPalPaymentUrl(sessionData: SessionData): string {
   // In production, this should integrate with PayPal SDK
   // For now, return instructions
   return (
-    `💰 Payment Details:\n` +
-    `Plan: ${plan}\n` +
-    `Amount: ${amount} ${currency}\n` +
-    `Session ID: ${sessionId}\n\n` +
+    `💰 Деталі оплати:\n` +
+    `План: ${plan}\n` +
+    `Сума: ${amount} ${currency}\n` +
+    `ID сесії: ${sessionId}\n\n` +
     `🔗 Будь ласка, завершіть оплату, використовуючи посилання, надане системою.\n` +
-    `Make sure to include your session ID (${sessionId}) in the payment custom field.\n\n` +
-    `After payment, you will receive access to your plan.`
+    `Переконайтеся, що включили ваш ID сесії (${sessionId}) в поле custom при оплаті.\n\n` +
+    `Після оплати ви отримаєте доступ до вашого плану.`
   );
 }
 
