@@ -80,10 +80,10 @@ export class ApiClient {
       }
 
       if (axiosError.code === 'ECONNREFUSED') {
-        throw new Error('Backend API is not available. Please try again later.');
+        throw new Error('Бэкенд API недоступний. Будь ласка, спробуйте пізніше.');
       }
 
-      throw new Error('Failed to send data to backend. Please try again.');
+      throw new Error('Не вдалося відправити дані в бэкенд. Будь ласка, спробуйте ще раз.');
     }
   }
 

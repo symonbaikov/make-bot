@@ -41,7 +41,7 @@ export function getPayPalPaymentUrl(sessionData: SessionData): string {
     `Plan: ${plan}\n` +
     `Amount: ${amount} ${currency}\n` +
     `Session ID: ${sessionId}\n\n` +
-    `🔗 Please complete your payment using the link provided by the system.\n` +
+    `🔗 Будь ласка, завершіть оплату, використовуючи посилання, надане системою.\n` +
     `Make sure to include your session ID (${sessionId}) in the payment custom field.\n\n` +
     `After payment, you will receive access to your plan.`
   );
