@@ -53,13 +53,24 @@ if (IS_PRODUCTION && !WEBHOOK_URL && process.env.ALLOW_POLLING_IN_PRODUCTION !==
 
 const bot = new Telegraf<BotContext>(TELEGRAM_BOT_TOKEN);
 
-// Session middleware
+// Session middleware - MUST be before handlers
 bot.use(sessionMiddleware());
 
-// Error handling
+// Error handling - centralized error handler
 bot.catch((err, ctx) => {
-  logger.error('Bot error caught', err);
-  handleError(ctx, err);
+  logger.error('❌ Unhandled bot error', {
+    error: err instanceof Error ? err.message : String(err),
+    stack: err instanceof Error ? err.stack : undefined,
+    update: ctx.update,
+    userId: ctx.from?.id,
+  });
+  
+  // Use centralized error handler
+  handleError(ctx, err).catch((handleError) => {
+    logger.error('❌ Failed to handle error', {
+      error: handleError instanceof Error ? handleError.message : String(handleError),
+    });
+  });
 });
 
 // Commands - wrapped in try-catch for safety
@@ -239,6 +250,24 @@ async function startBot() {
             body: req.body,
             processingTime: `${processingTime}ms`,
           });
+          
+          // Try to send error message to user if possible
+          try {
+            const userId = req.body?.message?.from?.id;
+            const chatId = req.body?.message?.chat?.id;
+            if (userId && chatId) {
+              await bot.telegram.sendMessage(
+                chatId,
+                '❌ Сталася помилка при обробці вашого повідомлення. Будь ласка, спробуйте ще раз.'
+              );
+              logger.info('✅ Error message sent to user', { userId, chatId });
+            }
+          } catch (sendError) {
+            logger.error('❌ Failed to send error message to user', {
+              error: sendError instanceof Error ? sendError.message : String(sendError),
+            });
+          }
+          
           return res.sendStatus(200); // Always return 200 to Telegram to avoid retries
         }
       });
