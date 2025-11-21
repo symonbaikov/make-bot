@@ -58,8 +58,10 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-# Disable npm scripts to prevent workspace issues
+# Disable npm scripts and workspace commands completely
 ENV npm_config_ignore_scripts=true
+ENV npm_config_workspace=false
+ENV npm_config_workspaces=false
 
 # Install OpenSSL for Prisma (required for linux-musl binary)
 
@@ -87,7 +89,9 @@ COPY --from=builder /app/frontend/dist ./frontend/dist
 # Copy node_modules from builder
 # Copy all node_modules - they're already installed correctly in builder stage
 # Don't worry about workspace structure - we only have backend package.json in runner stage
+# IMPORTANT: Remove any .npmrc or npm config that might trigger workspace commands
 COPY --from=builder /app/node_modules ./node_modules
+RUN rm -f .npmrc npm-shrinkwrap.json package-lock.json 2>/dev/null || true
 
 # Create logs directory and set permissions
 RUN mkdir -p /app/logs && \
