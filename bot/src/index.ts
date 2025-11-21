@@ -195,8 +195,66 @@ async function startBot() {
               lastError: webhookInfo.last_error_message,
               lastErrorDate: webhookInfo.last_error_date,
             },
+            expectedUrl: WEBHOOK_URL,
+            isCorrect: webhookInfo.url === WEBHOOK_URL,
           });
         } catch (error) {
+          res.status(500).json({
+            status: 'error',
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      });
+
+      // Force webhook setup endpoint (for debugging)
+      app.post('/webhook-setup', async (_req, res) => {
+        try {
+          if (!WEBHOOK_URL) {
+            return res.status(400).json({
+              status: 'error',
+              error: 'TELEGRAM_WEBHOOK_URL is not set in environment variables',
+            });
+          }
+
+          logger.info('Force webhook setup requested', { webhookUrl: WEBHOOK_URL });
+
+          // Delete existing webhook
+          try {
+            await bot.telegram.deleteWebhook({ drop_pending_updates: true });
+            logger.info('Deleted existing webhook');
+          } catch (error) {
+            logger.warn('Failed to delete existing webhook (may not exist)', error);
+          }
+
+          // Set new webhook
+          const webhookInfo = await bot.telegram.setWebhook(WEBHOOK_URL, {
+            drop_pending_updates: true,
+          });
+
+          // Verify webhook
+          const webhookStatus = await bot.telegram.getWebhookInfo();
+
+          logger.info('Webhook setup completed', {
+            webhookUrl: WEBHOOK_URL,
+            actualUrl: webhookStatus.url,
+            pendingUpdates: webhookStatus.pending_update_count,
+            lastError: webhookStatus.last_error_message,
+          });
+
+          res.json({
+            status: 'ok',
+            message: 'Webhook setup completed',
+            webhook: {
+              expectedUrl: WEBHOOK_URL,
+              actualUrl: webhookStatus.url,
+              pendingUpdates: webhookStatus.pending_update_count,
+              lastError: webhookStatus.last_error_message,
+              lastErrorDate: webhookStatus.last_error_date,
+              isCorrect: webhookStatus.url === WEBHOOK_URL,
+            },
+          });
+        } catch (error) {
+          logger.error('Failed to setup webhook', error);
           res.status(500).json({
             status: 'error',
             error: error instanceof Error ? error.message : String(error),
