@@ -12,10 +12,14 @@ export class MakeService {
   constructor() {
     const url = process.env.MAKE_WEBHOOK_URL;
     if (!url) {
-      logger.warn('MAKE_WEBHOOK_URL is not configured');
+      logger.warn('MAKE_WEBHOOK_URL is not configured - Make webhooks will be skipped');
+      logger.warn('To enable Make integration, set MAKE_WEBHOOK_URL in Railway environment variables');
       this.webhookUrl = '';
     } else {
       this.webhookUrl = url;
+      logger.info('Make webhook URL configured', { 
+        url: url.replace(/\/[^\/]+$/, '/****') // Mask the last part of URL for security
+      });
     }
   }
 
