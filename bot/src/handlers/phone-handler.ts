@@ -54,8 +54,8 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
         throw new Error('Email is missing');
       }
 
-      // Generate session ID if not provided
-      const sessionId = ctx.session.sessionId || `tg-${tgUserId}-${Date.now()}`;
+      // Generate session ID only when sending to webhook (backend requires it)
+      const sessionId = `tg-${tgUserId}-${Date.now()}`;
 
       await apiClient.sendBotWebhook({
         sessionId: sessionId,

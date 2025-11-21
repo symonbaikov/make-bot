@@ -140,7 +140,7 @@ async function startBot() {
       app.post('/webhook', async (req, res) => {
         const startTime = Date.now();
         const updateId = req.body?.update_id;
-        
+
         try {
           logger.info('📥 Webhook received', {
             updateId,
@@ -149,15 +149,15 @@ async function startBot() {
             userId: req.body?.message?.from?.id,
             timestamp: new Date().toISOString(),
           });
-          
+
           await bot.handleUpdate(req.body);
-          
+
           const processingTime = Date.now() - startTime;
           logger.info('✅ Webhook processed successfully', {
             updateId,
             processingTime: `${processingTime}ms`,
           });
-          
+
           res.sendStatus(200);
         } catch (error) {
           const processingTime = Date.now() - startTime;

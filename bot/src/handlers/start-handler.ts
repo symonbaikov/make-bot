@@ -1,18 +1,5 @@
 import { BotContext } from '../middleware/session-middleware';
 import { logger } from '../utils/logger';
-import { v4 as uuidv4 } from 'uuid';
-
-/**
- * Parse session_id from /start command parameter (optional)
- */
-function parseSessionId(text: string): string | null {
-  // Format: /start <session_id>
-  const parts = text.split(' ');
-  if (parts.length > 1) {
-    return parts[1];
-  }
-  return null;
-}
 
 export async function handleStart(ctx: BotContext): Promise<void> {
   try {
@@ -20,29 +7,21 @@ export async function handleStart(ctx: BotContext): Promise<void> {
     logger.info('Start command received', {
       userId: ctx.from?.id,
       username: ctx.from?.username,
-      messageText: ctx.message && 'text' in ctx.message ? ctx.message.text : null,
       timestamp: new Date().toISOString(),
     });
-
-    const messageText = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
-    const providedSessionId = messageText ? parseSessionId(messageText) : null;
 
     if (!ctx.session) {
       ctx.session = {};
     }
 
-    // Generate session ID if not provided
-    const sessionId = providedSessionId || `tg-${ctx.from?.id}-${uuidv4()}`;
-    ctx.session.sessionId = sessionId;
+    // Start data collection - no sessionId needed
     ctx.session.waitingForEmail = true;
     
-    // Set default plan and amount if not provided
-    ctx.session.plan = ctx.session.plan || 'STANDARD';
-    ctx.session.amount = ctx.session.amount || 99.99;
+    // Set default plan and amount
+    ctx.session.plan = 'STANDARD';
+    ctx.session.amount = 99.99;
 
-    logger.info('Session initialized', {
-      sessionId,
-      providedSessionId: providedSessionId || 'auto-generated',
+    logger.info('Session initialized for data collection', {
       userId: ctx.from?.id,
       processingTime: Date.now() - startTime,
     });
@@ -55,7 +34,6 @@ export async function handleStart(ctx: BotContext): Promise<void> {
     );
 
     logger.info('Start command completed', {
-      sessionId,
       userId: ctx.from?.id,
       totalTime: Date.now() - startTime,
     });

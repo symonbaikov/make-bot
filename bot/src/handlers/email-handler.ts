@@ -5,7 +5,6 @@ import { logger } from '../utils/logger';
 import { BotContext } from '../middleware/session-middleware';
 import { isValidEmail, normalizeEmail } from '../utils/email-validator';
 import { logger } from '../utils/logger';
-import { v4 as uuidv4 } from 'uuid';
 
 export async function handleEmailInput(ctx: BotContext): Promise<void> {
   try {
@@ -23,19 +22,9 @@ export async function handleEmailInput(ctx: BotContext): Promise<void> {
     }
 
     if (!ctx.session.waitingForEmail) {
-      // Not waiting for email - ignore silently or suggest /start
+      // Not waiting for email - ignore silently
       logger.debug('Not waiting for email, ignoring message');
       return;
-    }
-
-    // Generate session ID if not present (shouldn't happen, but safety check)
-    if (!ctx.session.sessionId) {
-      const tgUserId = ctx.from?.id?.toString() || 'unknown';
-      ctx.session.sessionId = `tg-${tgUserId}-${uuidv4()}`;
-      logger.info('Generated session ID for email handler', {
-        sessionId: ctx.session.sessionId,
-        userId: ctx.from?.id,
-      });
     }
 
     const messageText = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
@@ -63,7 +52,6 @@ export async function handleEmailInput(ctx: BotContext): Promise<void> {
 
     logger.info('Email collected successfully', {
       email,
-      sessionId: ctx.session.sessionId,
       userId: ctx.from?.id,
       processingTime: Date.now() - startTime,
     });
