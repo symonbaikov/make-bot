@@ -32,9 +32,15 @@ export class MakeService {
     retries: number = MAX_RETRIES
   ): Promise<void> {
     if (!this.webhookUrl) {
-      logger.warn('Make webhook URL not configured, skipping webhook');
+      logger.warn('Make webhook URL not configured, skipping webhook', { sessionId });
       return;
     }
+
+    logger.info('Sending webhook to Make', { 
+      sessionId, 
+      event: (data as any).event,
+      webhookUrl: this.webhookUrl.replace(/\/[^\/]+$/, '/****') // Mask URL for logging
+    });
 
     try {
       await axios.post(this.webhookUrl, data, {
