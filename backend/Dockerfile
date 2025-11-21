@@ -15,7 +15,8 @@ COPY bot/package.json ./bot/package.json
 
 # Install all dependencies (workspace will handle it)
 # Use npm ci for faster, reproducible builds
-RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+# Disable scripts to prevent workspace issues during install
+RUN npm ci --legacy-peer-deps --ignore-scripts || npm install --legacy-peer-deps --ignore-scripts
 
 # Build stage
 FROM base AS builder
