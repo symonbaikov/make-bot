@@ -62,7 +62,6 @@ export async function handleFirstNameInput(ctx: BotContext): Promise<void> {
     );
 
     logger.info('First name collected', {
-      sessionId: ctx.session.sessionId,
       firstName,
       userId: ctx.from?.id,
     });
@@ -117,7 +116,6 @@ export async function handleLastNameInput(ctx: BotContext): Promise<void> {
     );
 
     logger.info('Last name collected', {
-      sessionId: ctx.session.sessionId,
       lastName,
       userId: ctx.from?.id,
     });

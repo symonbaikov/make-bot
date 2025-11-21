@@ -20,7 +20,7 @@ export async function handleError(ctx: BotContext, error: unknown): Promise<void
       bot: {
         chatId: ctx.chat?.id,
         messageId: ctx.message?.message_id,
-        sessionId: ctx.session?.sessionId,
+        userId: ctx.from?.id,
         waitingFor: ctx.session?.waitingForEmail
           ? 'email'
           : ctx.session?.waitingForFirstName
