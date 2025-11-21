@@ -81,17 +81,10 @@ COPY --from=builder /app/backend/dist ./dist
 # Copy frontend build for static file serving
 COPY --from=builder /app/frontend/dist ./frontend/dist
 
-# Copy node_modules from builder (workspace structure)
-# Note: This includes all dependencies, but chown optimization below makes it faster
-# Only copy backend node_modules to avoid workspace issues
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
-# Copy all other dependencies (but skip workspace root node_modules)
-RUN mkdir -p node_modules && \
-    if [ -d "/app/node_modules" ]; then \
-      cp -r /app/node_modules/* node_modules/ 2>/dev/null || true; \
-    fi
+# Copy node_modules from builder
+# Copy all node_modules - they're already installed correctly in builder stage
+# Don't worry about workspace structure - we only have backend package.json in runner stage
+COPY --from=builder /app/node_modules ./node_modules
 
 # Create logs directory and set permissions
 RUN mkdir -p /app/logs && \
