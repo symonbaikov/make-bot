@@ -64,8 +64,6 @@ bot.on('text', async ctx => {
     await handleFirstNameInput(ctx);
   } else if (ctx.session?.waitingForLastName) {
     await handleLastNameInput(ctx);
-  } else if (ctx.session?.waitingForPhoneNumber) {
-    await handlePhoneNumberInput(ctx);
   } else {
     // If not waiting for any data, suggest using /start
     await ctx.reply(
