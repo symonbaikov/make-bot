@@ -1,10 +1,9 @@
 import { BotContext } from '../middleware/session-middleware';
-import { SessionData } from '../types';
 import { logger } from '../utils/logger';
-import { apiClient } from '../utils/api-client';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Parse session_id from /start command parameter
+ * Parse session_id from /start command parameter (optional)
  */
 function parseSessionId(text: string): string | null {
   // Format: /start <session_id>
@@ -15,83 +14,57 @@ function parseSessionId(text: string): string | null {
   return null;
 }
 
-/**
- * Get session data from backend API
- */
-async function getSessionData(sessionId: string): Promise<SessionData | null> {
-  try {
-    const session = await apiClient.getSession(sessionId);
-
-    if (!session) {
-      return null;
-    }
-
-    return {
-      sessionId: session.sessionId,
-      plan: session.plan as 'BASIC' | 'STANDARD' | 'PREMIUM',
-      amount: session.amount,
-      currency: session.currency,
-    };
-  } catch (error) {
-    logger.error('Failed to get session data', error);
-    return null;
-  }
-}
-
 export async function handleStart(ctx: BotContext): Promise<void> {
   try {
+    const startTime = Date.now();
     logger.info('Start command received', {
       userId: ctx.from?.id,
       username: ctx.from?.username,
       messageText: ctx.message && 'text' in ctx.message ? ctx.message.text : null,
+      timestamp: new Date().toISOString(),
     });
 
     const messageText = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
-    const sessionId = messageText ? parseSessionId(messageText) : null;
+    const providedSessionId = messageText ? parseSessionId(messageText) : null;
 
     if (!ctx.session) {
       ctx.session = {};
     }
 
-    // If session ID provided, try to get session data (optional)
-    if (sessionId) {
-      await ctx.reply('⏳ Перевіряю вашу сесію...');
-
-      const sessionData = await getSessionData(sessionId);
-      if (sessionData) {
-        // Store session data if found
-        ctx.session.sessionId = sessionId;
-        ctx.session.plan = sessionData.plan;
-        ctx.session.amount = sessionData.amount;
-        ctx.session.currency = sessionData.currency;
-
-        // Check if payment already completed
-        const session = await apiClient.getSession(sessionId);
-        if (session?.status === 'COMPLETED') {
-          await ctx.reply(
-            `✅ Ваш платіж вже завершено!\n\n` +
-              `📧 Email: ${session.finalEmail || session.emailUser || session.emailPaypal || 'N/A'}\n` +
-              `📋 ID сесії: ${sessionId}\n\n` +
-              `Якщо у вас є питання, будь ласка, зверніться до підтримки.`
-          );
-          return;
-        }
-      }
-    }
-
-    // Start data collection regardless of session ID
+    // Generate session ID if not provided
+    const sessionId = providedSessionId || `tg-${ctx.from?.id}-${uuidv4()}`;
+    ctx.session.sessionId = sessionId;
     ctx.session.waitingForEmail = true;
+    
+    // Set default plan and amount if not provided
+    ctx.session.plan = ctx.session.plan || 'STANDARD';
+    ctx.session.amount = ctx.session.amount || 99.99;
+
+    logger.info('Session initialized', {
+      sessionId,
+      providedSessionId: providedSessionId || 'auto-generated',
+      userId: ctx.from?.id,
+      processingTime: Date.now() - startTime,
+    });
 
     await ctx.reply(
       `👋 Вітаємо!\n\n` +
-        `Цей бот допомагає вам завершити процес оплати.\n\n` +
+        `Цей бот допоможе вам зібрати необхідну інформацію.\n\n` +
         `Щоб продовжити, будь ласка, надайте вашу адресу електронної пошти.\n\n` +
         `📧 Будь ласка, надішліть мені вашу адресу електронної пошти:`
     );
 
-    logger.info('Start command', { sessionId: sessionId || 'none', userId: ctx.from?.id });
+    logger.info('Start command completed', {
+      sessionId,
+      userId: ctx.from?.id,
+      totalTime: Date.now() - startTime,
+    });
   } catch (error) {
-    logger.error('Error in start handler', error);
+    logger.error('Error in start handler', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      userId: ctx.from?.id,
+    });
     await ctx.reply(
       '❌ Сталася помилка. Будь ласка, спробуйте пізніше або зверніться до підтримки.'
     );

@@ -138,19 +138,35 @@ async function startBot() {
 
       // Webhook endpoint - use webhookCallback for proper request handling
       app.post('/webhook', async (req, res) => {
+        const startTime = Date.now();
+        const updateId = req.body?.update_id;
+        
         try {
-          logger.info('Webhook received', {
-            updateId: req.body?.update_id,
+          logger.info('📥 Webhook received', {
+            updateId,
             message: req.body?.message?.text,
             command: req.body?.message?.entities?.[0]?.type,
+            userId: req.body?.message?.from?.id,
+            timestamp: new Date().toISOString(),
           });
+          
           await bot.handleUpdate(req.body);
+          
+          const processingTime = Date.now() - startTime;
+          logger.info('✅ Webhook processed successfully', {
+            updateId,
+            processingTime: `${processingTime}ms`,
+          });
+          
           res.sendStatus(200);
         } catch (error) {
-          logger.error('Error handling webhook update', {
+          const processingTime = Date.now() - startTime;
+          logger.error('❌ Error handling webhook update', {
             error: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined,
+            updateId,
             body: req.body,
+            processingTime: `${processingTime}ms`,
           });
           res.sendStatus(200); // Always return 200 to Telegram to avoid retries
         }
