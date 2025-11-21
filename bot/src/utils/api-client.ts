@@ -92,11 +92,19 @@ export class ApiClient {
    */
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await axios.get(`${this.baseUrl}/health`, {
+      const healthUrl = `${this.baseUrl}/health`;
+      const response = await axios.get(healthUrl, {
         timeout: 5000,
       });
       return response.status === 200;
-    } catch {
+    } catch (error) {
+      // Log error details for debugging
+      const axiosError = error as AxiosError;
+      if (axiosError.code === 'ECONNREFUSED' || axiosError.code === 'ETIMEDOUT') {
+        // Connection failed - backend might be down or URL is wrong
+        return false;
+      }
+      // Other errors (like 404) also mean backend is not available
       return false;
     }
   }

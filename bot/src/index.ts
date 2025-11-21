@@ -132,12 +132,16 @@ async function startBot() {
         }
 
         // Check backend API availability (non-blocking)
+        const apiUrl = process.env.API_URL || 'http://localhost:3000';
+        logger.info(`Checking backend API availability at: ${apiUrl}`);
         apiClient.healthCheck().then(isAvailable => {
           if (isAvailable) {
             logger.info('✅ Backend API is available');
           } else {
             logger.warn('⚠️ Backend API is not available - some features may not work');
+            logger.warn(`Backend URL: ${apiUrl}`);
             logger.warn('This is normal if backend is still starting up. Bot will continue to work.');
+            logger.warn('To fix: Set API_URL environment variable in Railway to your backend URL');
           }
         }).catch(err => {
           logger.warn('Failed to check backend API availability', err);
