@@ -62,33 +62,73 @@ bot.catch((err, ctx) => {
   handleError(ctx, err);
 });
 
-// Commands
-bot.start(handleStart);
-bot.help(handleHelp);
-
-// Text messages (data collection)
-bot.on('text', async ctx => {
-  // Check what data we're waiting for
-  if (ctx.session?.waitingForEmail) {
-    await handleEmailInput(ctx);
-  } else if (ctx.session?.waitingForFirstName) {
-    await handleFirstNameInput(ctx);
-  } else if (ctx.session?.waitingForLastName) {
-    await handleLastNameInput(ctx);
-  } else if (ctx.session?.waitingForPhoneNumber) {
-    await handlePhoneNumberInput(ctx);
-  } else {
-    // If not waiting for any data, suggest using /start
-    await ctx.reply('👋 Будь ласка, використайте /start, щоб почати.');
+// Commands - wrapped in try-catch for safety
+bot.start(async ctx => {
+  try {
+    await handleStart(ctx);
+  } catch (error) {
+    logger.error('Error in start command', {
+      error: error instanceof Error ? error.message : String(error),
+      userId: ctx.from?.id,
+    });
   }
 });
 
-// Handle other message types
+bot.help(async ctx => {
+  try {
+    await handleHelp(ctx);
+  } catch (error) {
+    logger.error('Error in help command', {
+      error: error instanceof Error ? error.message : String(error),
+      userId: ctx.from?.id,
+    });
+  }
+});
+
+// Text messages (data collection)
+bot.on('text', async ctx => {
+  try {
+    // Check what data we're waiting for
+    if (ctx.session?.waitingForEmail) {
+      await handleEmailInput(ctx);
+    } else if (ctx.session?.waitingForFirstName) {
+      await handleFirstNameInput(ctx);
+    } else if (ctx.session?.waitingForLastName) {
+      await handleLastNameInput(ctx);
+    } else if (ctx.session?.waitingForPhoneNumber) {
+      await handlePhoneNumberInput(ctx);
+    } else {
+      // If not waiting for any data, suggest using /start
+      await ctx.reply('👋 Будь ласка, використайте /start, щоб почати.');
+    }
+  } catch (error) {
+    logger.error('Error handling text message', {
+      error: error instanceof Error ? error.message : String(error),
+      userId: ctx.from?.id,
+    });
+    // Don't rethrow - just log the error
+  }
+});
+
+// Handle other message types (stickers, photos, etc.) - NOT text
 bot.on('message', async ctx => {
-  await ctx.reply(
-    '📝 Будь ласка, надсилайте тільки текстові повідомлення.\n\n' +
-      'Використайте /start, щоб почати, або /help для отримання додаткової інформації.'
-  );
+  try {
+    // Skip if this is a text message (already handled above)
+    if ('text' in ctx.message) {
+      return;
+    }
+
+    await ctx.reply(
+      '📝 Будь ласка, надсилайте тільки текстові повідомлення.\n\n' +
+        'Використайте /start, щоб почати, або /help для отримання додаткової інформації.'
+    );
+  } catch (error) {
+    logger.error('Error handling non-text message', {
+      error: error instanceof Error ? error.message : String(error),
+      userId: ctx.from?.id,
+    });
+    // Don't rethrow - just log the error
+  }
 });
 
 // Launch bot
