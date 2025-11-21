@@ -23,6 +23,31 @@ const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const IS_PRODUCTION = NODE_ENV === 'production';
 const USE_WEBHOOK = !!WEBHOOK_URL;
+const WEBHOOK_URL_PARSED = WEBHOOK_URL ? (() => {
+  try {
+    const parsed = new URL(WEBHOOK_URL);
+    if (parsed.protocol !== 'https:') {
+      logger.error('❌ TELEGRAM_WEBHOOK_URL must use HTTPS', { webhookUrl: WEBHOOK_URL });
+      process.exit(1);
+    }
+
+    if (!parsed.pathname || parsed.pathname === '/') {
+      logger.error(
+        '❌ TELEGRAM_WEBHOOK_URL must include a path (e.g. https://example.com/webhook)',
+        { webhookUrl: WEBHOOK_URL }
+      );
+      process.exit(1);
+    }
+    return parsed;
+  } catch (error) {
+    logger.error('❌ Invalid TELEGRAM_WEBHOOK_URL', {
+      error: error instanceof Error ? error.message : String(error),
+      webhookUrl: WEBHOOK_URL,
+    });
+    process.exit(1);
+  }
+})() : null;
+const WEBHOOK_PATH = WEBHOOK_URL_PARSED?.pathname || '/webhook';
 
 // Log environment check
 logger.info('Environment check:', {
@@ -52,6 +77,70 @@ if (IS_PRODUCTION && !WEBHOOK_URL && process.env.ALLOW_POLLING_IN_PRODUCTION !==
 }
 
 const bot = new Telegraf<BotContext>(TELEGRAM_BOT_TOKEN);
+
+interface WebhookStatus {
+  url: string;
+  pendingUpdates: number;
+  lastError?: string;
+  lastErrorDate?: number;
+  maxConnections?: number;
+  needsReset: boolean;
+}
+
+async function getWebhookStatus(): Promise<WebhookStatus> {
+  const webhookInfo = await bot.telegram.getWebhookInfo();
+  const needsReset =
+    webhookInfo.url !== WEBHOOK_URL ||
+    !!webhookInfo.last_error_message ||
+    webhookInfo.pending_update_count > 0;
+
+  return {
+    url: webhookInfo.url || '',
+    pendingUpdates: webhookInfo.pending_update_count,
+    lastError: webhookInfo.last_error_message,
+    lastErrorDate: webhookInfo.last_error_date,
+    maxConnections: webhookInfo.max_connections,
+    needsReset,
+  };
+}
+
+async function ensureWebhook(reason: string): Promise<WebhookStatus> {
+  if (!WEBHOOK_URL) {
+    throw new Error('TELEGRAM_WEBHOOK_URL is not configured');
+  }
+
+  logger.info('Configuring Telegram webhook', {
+    reason,
+    webhookUrl: WEBHOOK_URL,
+    path: WEBHOOK_PATH,
+  });
+
+  await bot.telegram.deleteWebhook({ drop_pending_updates: true });
+  await bot.telegram.setWebhook(WEBHOOK_URL, {
+    drop_pending_updates: true,
+  });
+
+  const status = await getWebhookStatus();
+
+  if (status.url !== WEBHOOK_URL) {
+    throw new Error(
+      `Webhook is not set correctly. Expected ${WEBHOOK_URL}, got ${status.url || 'empty'}`
+    );
+  }
+
+  if (status.pendingUpdates > 0) {
+    logger.warn('⚠️ Pending updates detected after webhook setup', { pendingUpdates: status.pendingUpdates });
+  }
+
+  logger.info('✅ Webhook configured', {
+    url: status.url,
+    pendingUpdates: status.pendingUpdates,
+    lastError: status.lastError,
+    lastErrorDate: status.lastErrorDate,
+  });
+
+  return status;
+}
 
 // Session middleware - MUST be before handlers
 bot.use(sessionMiddleware());
@@ -180,90 +269,73 @@ async function startBot() {
 
       // Health check endpoint
       app.get('/health', (_req, res) => {
-        res.json({ status: 'ok', mode: 'webhook' });
+        res.json({ status: 'ok', mode: 'webhook', webhookPath: WEBHOOK_PATH });
       });
 
-      // Test endpoint to verify webhook is accessible
-      app.get('/webhook-test', async (_req, res) => {
+      // Test endpoint to verify webhook is accessible and optionally refresh it
+      app.get('/webhook-test', async (req, res) => {
         try {
-          const webhookInfo = await bot.telegram.getWebhookInfo();
-          res.json({
+          const shouldReset =
+            String((req.query?.reset ?? req.query?.fix ?? req.query?.refresh) || '').toLowerCase() ===
+            'true';
+
+          let webhookStatus = await getWebhookStatus();
+
+          if (shouldReset || webhookStatus.needsReset) {
+            try {
+              webhookStatus = await ensureWebhook(
+                shouldReset ? 'manual-webhook-test-reset' : 'auto-webhook-test-reset'
+              );
+            } catch (error) {
+              logger.error('❌ Failed to refresh webhook from /webhook-test', {
+                error: error instanceof Error ? error.message : String(error),
+              });
+              return res.status(500).json({
+                status: 'error',
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+          }
+
+          return res.json({
             status: 'ok',
-            webhook: {
-              url: webhookInfo.url,
-              pendingUpdates: webhookInfo.pending_update_count,
-              lastError: webhookInfo.last_error_message,
-              lastErrorDate: webhookInfo.last_error_date,
-            },
+            webhook: webhookStatus,
             expectedUrl: WEBHOOK_URL,
-            isCorrect: webhookInfo.url === WEBHOOK_URL,
+            path: WEBHOOK_PATH,
+            reset: shouldReset,
           });
         } catch (error) {
-          res.status(500).json({
+          return res.status(500).json({
             status: 'error',
             error: error instanceof Error ? error.message : String(error),
           });
         }
       });
 
-      // Force webhook setup endpoint (for debugging)
-      app.post('/webhook-setup', async (_req, res) => {
+      const resetWebhookHandler = async (_req: express.Request, res: express.Response) => {
         try {
-          if (!WEBHOOK_URL) {
-            return res.status(400).json({
-              status: 'error',
-              error: 'TELEGRAM_WEBHOOK_URL is not set in environment variables',
-            });
-          }
-
-          logger.info('Force webhook setup requested', { webhookUrl: WEBHOOK_URL });
-
-          // Delete existing webhook
-          try {
-            await bot.telegram.deleteWebhook({ drop_pending_updates: true });
-            logger.info('Deleted existing webhook');
-          } catch (error) {
-            logger.warn('Failed to delete existing webhook (may not exist)', error);
-          }
-
-          // Set new webhook
-          const webhookInfo = await bot.telegram.setWebhook(WEBHOOK_URL, {
-            drop_pending_updates: true,
-          });
-
-          // Verify webhook
-          const webhookStatus = await bot.telegram.getWebhookInfo();
-
-          logger.info('Webhook setup completed', {
-            webhookUrl: WEBHOOK_URL,
-            actualUrl: webhookStatus.url,
-            pendingUpdates: webhookStatus.pending_update_count,
-            lastError: webhookStatus.last_error_message,
-          });
-
-          res.json({
+          const webhookStatus = await ensureWebhook('manual-reset-endpoint');
+          return res.json({
             status: 'ok',
-            message: 'Webhook setup completed',
-            webhook: {
-              expectedUrl: WEBHOOK_URL,
-              actualUrl: webhookStatus.url,
-              pendingUpdates: webhookStatus.pending_update_count,
-              lastError: webhookStatus.last_error_message,
-              lastErrorDate: webhookStatus.last_error_date,
-              isCorrect: webhookStatus.url === WEBHOOK_URL,
-            },
+            webhook: webhookStatus,
+            expectedUrl: WEBHOOK_URL,
+            path: WEBHOOK_PATH,
           });
         } catch (error) {
           logger.error('Failed to setup webhook', error);
-          res.status(500).json({
+          return res.status(500).json({
             status: 'error',
             error: error instanceof Error ? error.message : String(error),
           });
         }
-      });
+      };
+
+      // Force webhook setup endpoint (for debugging)
+      app.post('/webhook-setup', resetWebhookHandler);
+      app.post('/webhook/reset', resetWebhookHandler);
 
       // Webhook endpoint - use webhookCallback for proper request handling
-      app.post('/webhook', async (req, res) => {
+      app.post(WEBHOOK_PATH, async (req, res) => {
         const startTime = Date.now();
         const updateId = req.body?.update_id;
 
@@ -272,6 +344,7 @@ async function startBot() {
           updateId,
           hasBody: !!req.body,
           bodyKeys: req.body ? Object.keys(req.body) : [],
+          path: WEBHOOK_PATH,
           message: req.body?.message?.text,
           command: req.body?.message?.entities?.[0]?.type,
           userId: req.body?.message?.from?.id,
@@ -350,68 +423,22 @@ async function startBot() {
         logger.info(`✅ Webhook server listening on port ${PORT}`);
         logger.info(`✅ Health endpoint available at: http://0.0.0.0:${PORT}/health`);
 
-        // Delete existing webhook first to avoid conflicts, then set new one
-        // IMPORTANT: drop_pending_updates: true to clear pending updates that weren't delivered
         try {
-          await bot.telegram.deleteWebhook({ drop_pending_updates: true });
-          logger.info('Deleted existing webhook and dropped pending updates');
-        } catch (error) {
-          logger.warn('Failed to delete existing webhook (may not exist)', error);
-        }
-
-        // Set webhook URL
-        try {
-          logger.info(`Setting webhook to: ${WEBHOOK_URL}`);
-          const webhookInfo = await bot.telegram.setWebhook(WEBHOOK_URL, {
-            drop_pending_updates: true, // Clear pending updates when setting webhook
-          });
-          logger.info(`✅ Webhook set successfully!`, {
-            webhookUrl: WEBHOOK_URL,
-            result: webhookInfo,
-          });
-
-          // Verify webhook was set correctly
-          const webhookStatus = await bot.telegram.getWebhookInfo();
+          const webhookStatus = await ensureWebhook('startup');
           logger.info(`✅ Webhook status verified:`, {
             url: webhookStatus.url,
-            pendingUpdateCount: webhookStatus.pending_update_count,
-            lastErrorDate: webhookStatus.last_error_date,
-            lastErrorMessage: webhookStatus.last_error_message,
-            maxConnections: webhookStatus.max_connections,
+            pendingUpdateCount: webhookStatus.pendingUpdates,
+            lastErrorDate: webhookStatus.lastErrorDate,
+            lastErrorMessage: webhookStatus.lastError,
+            path: WEBHOOK_PATH,
           });
-
-          // Warn if webhook has errors
-          if (webhookStatus.last_error_message) {
-            logger.error('❌ Webhook has errors!', {
-              lastErrorDate: webhookStatus.last_error_date,
-              lastErrorMessage: webhookStatus.last_error_message,
-              url: webhookStatus.url,
-            });
-          }
-
-          // Warn if there are pending updates (should be 0 after drop_pending_updates: true)
-          if (webhookStatus.pending_update_count > 0) {
-            logger.warn('⚠️ There are pending updates that were not delivered', {
-              pendingUpdateCount: webhookStatus.pending_update_count,
-            });
-            logger.warn('⚠️ Attempting to clear pending updates...');
-            try {
-              // Try to clear pending updates by resetting webhook
-              await bot.telegram.setWebhook(WEBHOOK_URL, {
-                drop_pending_updates: true,
-              });
-              logger.info('✅ Pending updates cleared');
-            } catch (error) {
-              logger.error('❌ Failed to clear pending updates', error);
-            }
-          }
         } catch (error) {
           logger.error('❌ Failed to set webhook', {
             error: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined,
             webhookUrl: WEBHOOK_URL,
           });
-          throw error;
+          process.exit(1);
         }
 
         // Check backend API availability (non-blocking)
