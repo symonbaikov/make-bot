@@ -168,7 +168,7 @@ async function startBot() {
             processingTime: `${processingTime}ms`,
           });
 
-          res.sendStatus(200);
+          return res.sendStatus(200);
         } catch (error) {
           const processingTime = Date.now() - startTime;
           logger.error('❌ Error handling webhook update', {
@@ -178,7 +178,7 @@ async function startBot() {
             body: req.body,
             processingTime: `${processingTime}ms`,
           });
-          res.sendStatus(200); // Always return 200 to Telegram to avoid retries
+          return res.sendStatus(200); // Always return 200 to Telegram to avoid retries
         }
       });
 
