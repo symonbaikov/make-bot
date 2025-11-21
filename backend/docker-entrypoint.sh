@@ -1,8 +1,13 @@
 #!/bin/sh
 set -e
 
-# Disable npm scripts to prevent workspace issues
+# Disable npm scripts and workspace commands completely
 export npm_config_ignore_scripts=true
+# Unset workspace-related variables to prevent conflicts
+unset npm_config_workspace
+unset npm_config_workspaces
+# Explicitly disable workspace detection
+export npm_config_workspaces=false
 
 echo "Starting backend service..."
 
@@ -20,7 +25,8 @@ echo "Database is ready!"
 if [ ! -d "node_modules/.prisma/client" ] || [ ! -f "node_modules/.prisma/client/query-engine-linux-musl-openssl-3.0.x" ] && [ ! -f "node_modules/.prisma/client/query-engine-linux-musl-arm64-openssl-3.0.x" ]; then
   echo "Prisma client not found or missing Query Engine, generating..."
   export PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
-  npx prisma generate || {
+  # Use npx with explicit no-workspace flag to prevent conflicts
+  npx --no-workspaces prisma generate || {
     echo "Warning: Prisma generate failed, but continuing..."
   }
 fi
@@ -47,7 +53,8 @@ echo "Applying database schema with db push..."
 echo "DATABASE_URL preview: $(echo "$DATABASE_URL" | sed 's/:[^:@]*@/:****@/')"
 
 # Run prisma db push with verbose output
-npx prisma db push --skip-generate --accept-data-loss --verbose || {
+# Use --no-workspaces flag explicitly to prevent npm workspace conflicts
+npx --no-workspaces prisma db push --skip-generate --accept-data-loss --verbose || {
   echo "=========================================="
   echo "ERROR: Database push failed!"
   echo "=========================================="

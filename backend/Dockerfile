@@ -58,10 +58,10 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-# Disable npm scripts and workspace commands completely
+# Disable npm scripts completely
 ENV npm_config_ignore_scripts=true
-ENV npm_config_workspace=false
-ENV npm_config_workspaces=false
+# Don't set workspace variables here - unset them in docker-entrypoint.sh instead
+# to avoid conflicts with npx --no-workspaces flag
 
 # Install OpenSSL for Prisma (required for linux-musl binary)
 
@@ -110,6 +110,7 @@ USER nodejs
 # Use PORT from environment, default to 3000 for local development
 ENV PORT=${PORT:-3000}
 ENV NODE_ENV=production
+# Don't set workspace variables here - they cause conflicts with npx --no-workspaces
 
 # Expose the port (Railway will use PORT env var, but we expose common ports)
 EXPOSE 3000 8080
