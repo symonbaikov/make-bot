@@ -79,9 +79,7 @@ bot.on('text', async ctx => {
     await handlePhoneNumberInput(ctx);
   } else {
     // If not waiting for any data, suggest using /start
-    await ctx.reply(
-      '👋 Будь ласка, використайте /start, щоб почати.'
-    );
+    await ctx.reply('👋 Будь ласка, використайте /start, щоб почати.');
   }
 });
 
