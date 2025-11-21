@@ -15,8 +15,9 @@ COPY bot/package.json ./bot/package.json
 
 # Install all dependencies (workspace will handle it)
 # Use npm ci for faster, reproducible builds
-# Disable scripts to prevent workspace issues during install
-RUN npm ci --legacy-peer-deps --ignore-scripts || npm install --legacy-peer-deps --ignore-scripts
+# CRITICAL: Don't use --ignore-scripts for native modules like bcrypt
+# Native modules need to be built during install
+RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 
 # Build stage
 FROM base AS builder
@@ -88,10 +89,15 @@ COPY --from=builder /app/frontend/dist ./frontend/dist
 
 # Copy node_modules from builder
 # Copy all node_modules - they're already installed correctly in builder stage
-# Don't worry about workspace structure - we only have backend package.json in runner stage
-# IMPORTANT: Remove any .npmrc or npm config that might trigger workspace commands
+# CRITICAL: Copy node_modules BEFORE switching to nodejs user to preserve native bindings
 COPY --from=builder /app/node_modules ./node_modules
 RUN rm -f .npmrc npm-shrinkwrap.json package-lock.json 2>/dev/null || true
+
+# Ensure native modules (bcrypt, etc.) are properly accessible
+# Native modules need to be owned by nodejs user but with proper permissions
+RUN chmod -R u+rX node_modules/bcrypt 2>/dev/null || true && \
+    chmod -R u+rX node_modules/@esbuild 2>/dev/null || true && \
+    find node_modules -name "*.node" -exec chmod u+r {} \; 2>/dev/null || true
 
 # Create logs directory and set permissions
 RUN mkdir -p /app/logs && \
