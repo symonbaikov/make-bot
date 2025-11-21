@@ -26,12 +26,36 @@ export async function handleStart(ctx: BotContext): Promise<void> {
       processingTime: Date.now() - startTime,
     });
 
-    await ctx.reply(
+    const welcomeMessage = 
       `👋 Вітаємо!\n\n` +
-        `Цей бот допоможе вам зібрати необхідну інформацію.\n\n` +
-        `Щоб продовжити, будь ласка, надайте вашу адресу електронної пошти.\n\n` +
-        `📧 Будь ласка, надішліть мені вашу адресу електронної пошти:`
-    );
+      `Цей бот допоможе вам зібрати необхідну інформацію.\n\n` +
+      `Щоб продовжити, будь ласка, надайте вашу адресу електронної пошти.\n\n` +
+      `📧 Будь ласка, надішліть мені вашу адресу електронної пошти:`;
+
+    logger.info('Sending welcome message', {
+      userId: ctx.from?.id,
+      chatId: ctx.chat?.id,
+      messageLength: welcomeMessage.length,
+    });
+
+    try {
+      const replyResult = await ctx.reply(welcomeMessage);
+      
+      logger.info('✅ Welcome message sent successfully', {
+        userId: ctx.from?.id,
+        messageId: replyResult.message_id,
+        chatId: replyResult.chat.id,
+        totalTime: Date.now() - startTime,
+      });
+    } catch (replyError) {
+      logger.error('❌ Failed to send welcome message', {
+        error: replyError instanceof Error ? replyError.message : String(replyError),
+        stack: replyError instanceof Error ? replyError.stack : undefined,
+        userId: ctx.from?.id,
+        chatId: ctx.chat?.id,
+      });
+      throw replyError; // Re-throw to be caught by outer try-catch
+    }
 
     logger.info('Start command completed', {
       userId: ctx.from?.id,
