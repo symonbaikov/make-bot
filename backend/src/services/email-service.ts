@@ -124,6 +124,104 @@ export class EmailService {
       text: body,
     });
   }
+
+  /**
+   * Send notification to admin about new user registration
+   */
+  async sendNewUserNotification(data: {
+    sessionId: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string;
+    plan: string;
+    amount: number;
+  }): Promise<void> {
+    const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+    if (!adminEmail) {
+      logger.warn('ADMIN_NOTIFICATION_EMAIL not configured, skipping admin notification');
+      return;
+    }
+
+    const fullName = data.firstName || data.lastName
+      ? `${data.firstName || ''} ${data.lastName || ''}`.trim()
+      : 'Не вказано';
+
+    const subject = 'Новий користувач зареєстрований';
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #4F46E5; color: white; padding: 20px; border-radius: 5px 5px 0 0; }
+            .content { background: #f9fafb; padding: 20px; border-radius: 0 0 5px 5px; }
+            .info-row { margin: 10px 0; padding: 10px; background: white; border-radius: 5px; }
+            .label { font-weight: bold; color: #6B7280; }
+            .value { color: #111827; margin-top: 5px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h2>Новий користувач зареєстрований</h2>
+            </div>
+            <div class="content">
+              <div class="info-row">
+                <div class="label">ID сесії:</div>
+                <div class="value">${data.sessionId}</div>
+              </div>
+              <div class="info-row">
+                <div class="label">Email:</div>
+                <div class="value">${data.email}</div>
+              </div>
+              <div class="info-row">
+                <div class="label">Ім'я та прізвище:</div>
+                <div class="value">${fullName}</div>
+              </div>
+              ${data.phoneNumber ? `
+              <div class="info-row">
+                <div class="label">Телефон:</div>
+                <div class="value">${data.phoneNumber}</div>
+              </div>
+              ` : ''}
+              <div class="info-row">
+                <div class="label">План:</div>
+                <div class="value">${data.plan}</div>
+              </div>
+              <div class="info-row">
+                <div class="label">Сума:</div>
+                <div class="value">$${data.amount}</div>
+              </div>
+              <p style="margin-top: 20px; color: #6B7280; font-size: 14px;">
+                Переглянути деталі в адмін-панелі: <a href="${process.env.ADMIN_PANEL_URL || 'https://make-botbackend-production.up.railway.app'}/payments/${data.sessionId}" style="color: #4F46E5;">Відкрити</a>
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+    const text = `Новий користувач зареєстрований\n\nID сесії: ${data.sessionId}\nEmail: ${data.email}\nІм'я та прізвище: ${fullName}\n${data.phoneNumber ? `Телефон: ${data.phoneNumber}\n` : ''}План: ${data.plan}\nСума: $${data.amount}`;
+
+    try {
+      await this.sendEmail({
+        to: adminEmail,
+        subject,
+        html,
+        text,
+      });
+      logger.info('Admin notification sent successfully', { sessionId: data.sessionId, adminEmail });
+    } catch (error) {
+      logger.error('Failed to send admin notification', {
+        sessionId: data.sessionId,
+        adminEmail,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Don't throw error - notification failure shouldn't break the main flow
+    }
+  }
 }
 
 export const emailService = new EmailService();

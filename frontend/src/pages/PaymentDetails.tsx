@@ -154,6 +154,26 @@ export function PaymentDetails() {
             <label className="block text-sm font-medium text-gray-500">Email (PayPal)</label>
             <p className="mt-1 text-sm text-gray-900">{session.emailPaypal || '-'}</p>
           </div>
+          {session.user && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-500">Ім'я</label>
+                <p className="mt-1 text-sm text-gray-900">{session.user.firstName || '-'}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-500">Прізвище</label>
+                <p className="mt-1 text-sm text-gray-900">{session.user.lastName || '-'}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-500">Телефон</label>
+                <p className="mt-1 text-sm text-gray-900">{session.user.phoneNumber || '-'}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-500">Telegram User ID</label>
+                <p className="mt-1 text-sm text-gray-900">{session.user.tgUserId || '-'}</p>
+              </div>
+            </>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-500">Дата оплати</label>
             <p className="mt-1 text-sm text-gray-900">

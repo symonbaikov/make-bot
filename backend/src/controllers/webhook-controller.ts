@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { sessionService } from '../services/session-service';
 import { makeService } from '../services/make-service';
+import { emailService } from '../services/email-service';
 import { sendSuccess } from '../utils/response';
 import { asyncHandler } from '../middleware/async-handler';
 import { BotWebhookInput, PayPalWebhookInput } from '../validators/webhook-validators';
@@ -37,6 +38,22 @@ export class WebhookController {
       phoneNumber: data.phoneNumber as string | undefined,
       plan: data.plan as string,
       amount: data.amount as number,
+    });
+
+    // Send notification to admin (non-blocking)
+    emailService.sendNewUserNotification({
+      sessionId: data.sessionId as string,
+      email: data.email as string,
+      firstName: data.firstName as string | undefined,
+      lastName: data.lastName as string | undefined,
+      phoneNumber: data.phoneNumber as string | undefined,
+      plan: data.plan as string,
+      amount: data.amount as number,
+    }).catch(error => {
+      logger.error('Failed to send admin notification', {
+        sessionId: data.sessionId,
+        error: error instanceof Error ? error.message : String(error),
+      });
     });
 
     sendSuccess(res, {
