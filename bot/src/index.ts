@@ -131,13 +131,16 @@ async function startBot() {
           throw error;
         }
 
-        // Check backend API availability
+        // Check backend API availability (non-blocking)
         apiClient.healthCheck().then(isAvailable => {
           if (isAvailable) {
-            logger.info('Backend API is available');
+            logger.info('✅ Backend API is available');
           } else {
-            logger.warn('Backend API is not available - some features may not work');
+            logger.warn('⚠️ Backend API is not available - some features may not work');
+            logger.warn('This is normal if backend is still starting up. Bot will continue to work.');
           }
+        }).catch(err => {
+          logger.warn('Failed to check backend API availability', err);
         });
       });
     } else {
