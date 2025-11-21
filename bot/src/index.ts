@@ -107,24 +107,24 @@ async function startBot() {
       port: PORT,
       apiUrl: process.env.API_URL || 'NOT SET',
     });
-    
+
     logger.info('✅ Bot instance created successfully');
 
     if (USE_WEBHOOK) {
       // Webhook mode for production
       logger.info(`Starting bot in webhook mode: ${WEBHOOK_URL}`);
-      
+
       if (!WEBHOOK_URL) {
         logger.error('❌ TELEGRAM_WEBHOOK_URL is not set! Cannot start in webhook mode.');
         process.exit(1);
       }
-      
+
       // Bot token already checked at startup, but double-check
       if (!TELEGRAM_BOT_TOKEN) {
         logger.error('❌ TELEGRAM_BOT_TOKEN is not set! Cannot start bot.');
         process.exit(1);
       }
-      
+
       logger.info('✅ All environment variables validated');
 
       // Create Express app for webhook
@@ -173,11 +173,11 @@ async function startBot() {
         try {
           logger.info(`Setting webhook to: ${WEBHOOK_URL}`);
           const webhookInfo = await bot.telegram.setWebhook(WEBHOOK_URL);
-          logger.info(`✅ Webhook set successfully!`, { 
+          logger.info(`✅ Webhook set successfully!`, {
             webhookUrl: WEBHOOK_URL,
-            result: webhookInfo 
+            result: webhookInfo,
           });
-          
+
           // Verify webhook was set correctly
           const webhookStatus = await bot.telegram.getWebhookInfo();
           logger.info(`Webhook status:`, {
@@ -268,7 +268,7 @@ async function startBot() {
 }
 
 // Start bot with error handling
-startBot().catch((error) => {
+startBot().catch(error => {
   logger.error('❌ Fatal error starting bot:', {
     error: error instanceof Error ? error.message : String(error),
     stack: error instanceof Error ? error.stack : undefined,
