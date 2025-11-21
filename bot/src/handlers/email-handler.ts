@@ -53,9 +53,7 @@ export async function handleEmailInput(ctx: BotContext): Promise<void> {
     });
 
     await ctx.reply(
-      `✅ Email отримано!\n\n` +
-        `📧 Email: ${email}\n\n` +
-        `Тепер, будь ласка, надайте ваше ім'я:`
+      `✅ Email отримано!\n\n` + `📧 Email: ${email}\n\n` + `Тепер, будь ласка, надайте ваше ім'я:`
     );
   } catch (error) {
     logger.error('Error in email handler', {
