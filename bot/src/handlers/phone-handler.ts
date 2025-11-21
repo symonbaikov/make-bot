@@ -77,7 +77,7 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
       });
 
       logger.info('User data sent to backend successfully', {
-        sessionId: ctx.session.sessionId,
+        sessionId: sessionId,
         email: ctx.session.email,
         firstName: ctx.session.firstName,
         lastName: ctx.session.lastName,
@@ -90,6 +90,7 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
         `📧 Email: ${ctx.session.email}\n` +
         `👤 Ім'я: ${ctx.session.firstName || ''} ${ctx.session.lastName || ''}\n` +
         `📱 Телефон: ${ctx.session.phoneNumber}\n\n` +
+        `Ви можете повернутися на сторінку для завершення оплати.\n\n` +
         `Ми зв'яжемося з вами найближчим часом.`
       );
 
