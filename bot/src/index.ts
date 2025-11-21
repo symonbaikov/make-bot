@@ -17,15 +17,26 @@ dotenv.config();
 // Initialize Sentry BEFORE bot initialization
 initSentry();
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_URL = process.env.TELEGRAM_WEBHOOK_URL;
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const IS_PRODUCTION = NODE_ENV === 'production';
 const USE_WEBHOOK = !!WEBHOOK_URL;
 
-if (!BOT_TOKEN) {
-  logger.error('TELEGRAM_BOT_TOKEN is not set in environment variables');
+// Log environment check
+logger.info('Environment check:', {
+  hasBotToken: !!TELEGRAM_BOT_TOKEN,
+  hasWebhookUrl: !!WEBHOOK_URL,
+  webhookUrl: WEBHOOK_URL || 'NOT SET',
+  port: PORT,
+  nodeEnv: NODE_ENV,
+  isProduction: IS_PRODUCTION,
+  useWebhook: USE_WEBHOOK,
+});
+
+if (!TELEGRAM_BOT_TOKEN) {
+  logger.error('❌ TELEGRAM_BOT_TOKEN is not set in environment variables');
   process.exit(1);
 }
 
@@ -40,7 +51,7 @@ if (IS_PRODUCTION && !WEBHOOK_URL && process.env.ALLOW_POLLING_IN_PRODUCTION !==
   process.exit(1);
 }
 
-const bot = new Telegraf<BotContext>(BOT_TOKEN);
+const bot = new Telegraf<BotContext>(TELEGRAM_BOT_TOKEN);
 
 // Session middleware
 bot.use(sessionMiddleware());
@@ -87,9 +98,34 @@ bot.on('message', async ctx => {
 // Launch bot
 async function startBot() {
   try {
+    // Log startup information
+    logger.info('🚀 Bot starting...', {
+      nodeEnv: process.env.NODE_ENV,
+      useWebhook: USE_WEBHOOK,
+      webhookUrl: WEBHOOK_URL || 'NOT SET',
+      botToken: TELEGRAM_BOT_TOKEN ? `${TELEGRAM_BOT_TOKEN.substring(0, 10)}...` : 'NOT SET',
+      port: PORT,
+      apiUrl: process.env.API_URL || 'NOT SET',
+    });
+    
+    logger.info('✅ Bot instance created successfully');
+
     if (USE_WEBHOOK) {
       // Webhook mode for production
       logger.info(`Starting bot in webhook mode: ${WEBHOOK_URL}`);
+      
+      if (!WEBHOOK_URL) {
+        logger.error('❌ TELEGRAM_WEBHOOK_URL is not set! Cannot start in webhook mode.');
+        process.exit(1);
+      }
+      
+      // Bot token already checked at startup, but double-check
+      if (!TELEGRAM_BOT_TOKEN) {
+        logger.error('❌ TELEGRAM_BOT_TOKEN is not set! Cannot start bot.');
+        process.exit(1);
+      }
+      
+      logger.info('✅ All environment variables validated');
 
       // Create Express app for webhook
       const app = express();
@@ -103,7 +139,7 @@ async function startBot() {
       // Webhook endpoint - use webhookCallback for proper request handling
       app.post('/webhook', async (req, res) => {
         try {
-          logger.info('Webhook received', { 
+          logger.info('Webhook received', {
             updateId: req.body?.update_id,
             message: req.body?.message?.text,
             command: req.body?.message?.entities?.[0]?.type,
@@ -122,7 +158,8 @@ async function startBot() {
 
       // Start Express server
       app.listen(PORT, async () => {
-        logger.info(`Webhook server listening on port ${PORT}`);
+        logger.info(`✅ Webhook server listening on port ${PORT}`);
+        logger.info(`✅ Health endpoint available at: http://0.0.0.0:${PORT}/health`);
 
         // Delete existing webhook first to avoid conflicts, then set new one
         try {
@@ -134,10 +171,27 @@ async function startBot() {
 
         // Set webhook URL
         try {
-          await bot.telegram.setWebhook(WEBHOOK_URL);
-          logger.info(`Webhook set to: ${WEBHOOK_URL}`);
+          logger.info(`Setting webhook to: ${WEBHOOK_URL}`);
+          const webhookInfo = await bot.telegram.setWebhook(WEBHOOK_URL);
+          logger.info(`✅ Webhook set successfully!`, { 
+            webhookUrl: WEBHOOK_URL,
+            result: webhookInfo 
+          });
+          
+          // Verify webhook was set correctly
+          const webhookStatus = await bot.telegram.getWebhookInfo();
+          logger.info(`Webhook status:`, {
+            url: webhookStatus.url,
+            pendingUpdateCount: webhookStatus.pending_update_count,
+            lastErrorDate: webhookStatus.last_error_date,
+            lastErrorMessage: webhookStatus.last_error_message,
+          });
         } catch (error) {
-          logger.error('Failed to set webhook', error);
+          logger.error('❌ Failed to set webhook', {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            webhookUrl: WEBHOOK_URL,
+          });
           throw error;
         }
 
@@ -213,7 +267,14 @@ async function startBot() {
   }
 }
 
-startBot();
+// Start bot with error handling
+startBot().catch((error) => {
+  logger.error('❌ Fatal error starting bot:', {
+    error: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+  });
+  process.exit(1);
+});
 
 // Graceful shutdown
 process.once('SIGINT', async () => {

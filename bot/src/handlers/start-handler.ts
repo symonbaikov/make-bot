@@ -21,7 +21,7 @@ function parseSessionId(text: string): string | null {
 async function getSessionData(sessionId: string): Promise<SessionData | null> {
   try {
     const session = await apiClient.getSession(sessionId);
-    
+
     if (!session) {
       return null;
     }
@@ -40,7 +40,7 @@ async function getSessionData(sessionId: string): Promise<SessionData | null> {
 
 export async function handleStart(ctx: BotContext): Promise<void> {
   try {
-    logger.info('Start command received', { 
+    logger.info('Start command received', {
       userId: ctx.from?.id,
       username: ctx.from?.username,
       messageText: ctx.message && 'text' in ctx.message ? ctx.message.text : null,
@@ -70,9 +70,9 @@ export async function handleStart(ctx: BotContext): Promise<void> {
         if (session?.status === 'COMPLETED') {
           await ctx.reply(
             `✅ Ваш платіж вже завершено!\n\n` +
-            `📧 Email: ${session.finalEmail || session.emailUser || session.emailPaypal || 'N/A'}\n` +
-            `📋 ID сесії: ${sessionId}\n\n` +
-            `Якщо у вас є питання, будь ласка, зверніться до підтримки.`
+              `📧 Email: ${session.finalEmail || session.emailUser || session.emailPaypal || 'N/A'}\n` +
+              `📋 ID сесії: ${sessionId}\n\n` +
+              `Якщо у вас є питання, будь ласка, зверніться до підтримки.`
           );
           return;
         }
@@ -84,9 +84,9 @@ export async function handleStart(ctx: BotContext): Promise<void> {
 
     await ctx.reply(
       `👋 Вітаємо!\n\n` +
-      `Цей бот допомагає вам завершити процес оплати.\n\n` +
-      `Щоб продовжити, будь ласка, надайте вашу адресу електронної пошти.\n\n` +
-      `📧 Будь ласка, надішліть мені вашу адресу електронної пошти:`
+        `Цей бот допомагає вам завершити процес оплати.\n\n` +
+        `Щоб продовжити, будь ласка, надайте вашу адресу електронної пошти.\n\n` +
+        `📧 Будь ласка, надішліть мені вашу адресу електронної пошти:`
     );
 
     logger.info('Start command', { sessionId: sessionId || 'none', userId: ctx.from?.id });
@@ -97,4 +97,3 @@ export async function handleStart(ctx: BotContext): Promise<void> {
     );
   }
 }
-

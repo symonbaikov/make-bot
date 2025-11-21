@@ -16,6 +16,7 @@
 В Railway откройте **Bot сервис** → **Logs** и проверьте:
 
 **Должно быть:**
+
 ```
 Starting bot in webhook mode: https://make-botbot-production.up.railway.app/webhook
 Webhook server listening on port 8080
@@ -23,6 +24,7 @@ Webhook set to: https://make-botbot-production.up.railway.app/webhook
 ```
 
 **Если видите ошибки:**
+
 - `Failed to set webhook` - проверьте URL
 - `Error handling webhook update` - проверьте обработку команд
 - Нет логов вообще - бот не запустился
@@ -30,18 +32,21 @@ Webhook set to: https://make-botbot-production.up.railway.app/webhook
 ### Шаг 3: Проверьте доступность webhook
 
 Откройте в браузере:
+
 ```
 https://make-botbot-production.up.railway.app/health
 ```
 
 Должно вернуть:
+
 ```json
-{"status":"ok","mode":"webhook"}
+{ "status": "ok", "mode": "webhook" }
 ```
 
 ### Шаг 4: Проверьте переменные окружения
 
 Убедитесь, что установлены:
+
 - `TELEGRAM_BOT_TOKEN` - токен бота
 - `TELEGRAM_WEBHOOK_URL` - полный URL с `/webhook`
 - `API_URL` - URL бэкенда
@@ -50,6 +55,7 @@ https://make-botbot-production.up.railway.app/health
 ### Шаг 5: Проверьте обработку команды /start
 
 После отправки `/start` в логах должно быть:
+
 ```
 Start command received { userId: ..., username: ..., messageText: '/start' }
 Start command { sessionId: 'none', userId: ... }
@@ -62,6 +68,7 @@ Start command { sessionId: 'none', userId: ... }
 Если webhook не работает, можно временно использовать polling:
 
 1. В Railway для Bot сервиса установите:
+
    ```
    ALLOW_POLLING_IN_PRODUCTION=true
    ```
@@ -75,6 +82,7 @@ Start command { sessionId: 'none', userId: ... }
 ### Шаг 7: Проверьте, что бот запущен
 
 В Railway проверьте:
+
 - Статус сервиса должен быть "Running"
 - Последний деплой должен быть успешным
 - Нет ошибок в логах при запуске
@@ -97,4 +105,3 @@ curl -X POST https://make-botbot-production.up.railway.app/webhook
 2. **Бот не запущен** - проверьте статус в Railway
 3. **Ошибки в коде** - проверьте логи на наличие ошибок
 4. **Telegram не может достучаться** - проверьте доступность домена
-
