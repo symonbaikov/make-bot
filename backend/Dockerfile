@@ -27,7 +27,8 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy source code and configs
 COPY backend ./backend
 COPY frontend ./frontend
-COPY package.json ./
+# Don't copy root package.json to avoid workspace issues in builder stage
+# We only need workspace structure for npm install in deps stage
 COPY tsconfig.json ./
 
 # Build frontend first (monolithic build)
@@ -73,7 +74,7 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nodejs
 
 # Copy necessary files in optimal order (smaller files first for better caching)
-COPY --from=builder /app/backend/package.json ./
+COPY --from=builder /app/backend/package.json ./package.json
 COPY --from=builder /app/backend/prisma ./prisma
 COPY backend/docker-entrypoint.sh ./docker-entrypoint.sh
 COPY --from=builder /app/backend/dist ./dist
@@ -82,7 +83,15 @@ COPY --from=builder /app/frontend/dist ./frontend/dist
 
 # Copy node_modules from builder (workspace structure)
 # Note: This includes all dependencies, but chown optimization below makes it faster
-COPY --from=builder /app/node_modules ./node_modules
+# Only copy backend node_modules to avoid workspace issues
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
+# Copy all other dependencies (but skip workspace root node_modules)
+RUN mkdir -p node_modules && \
+    if [ -d "/app/node_modules" ]; then \
+      cp -r /app/node_modules/* node_modules/ 2>/dev/null || true; \
+    fi
 
 # Create logs directory and set permissions
 RUN mkdir -p /app/logs && \
