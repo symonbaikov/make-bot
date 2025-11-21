@@ -105,11 +105,12 @@ RUN mkdir -p /app/logs && \
     chmod +x /app/docker-entrypoint.sh
 
 # Set ownership efficiently (critical for fast unpacking)
-# CRITICAL: Prisma needs write access to @prisma/engines directory
-# So we need to chown node_modules/@prisma specifically
+# CRITICAL: Native modules (bcrypt, esbuild) and Prisma need proper ownership
 RUN chown -R nodejs:nodejs /app/dist /app/logs /app/docker-entrypoint.sh /app/package.json /app/prisma /app/frontend && \
     chown -R nodejs:nodejs /app/node_modules/@prisma 2>/dev/null || true && \
     chown -R nodejs:nodejs /app/node_modules/.prisma 2>/dev/null || true && \
+    chown -R nodejs:nodejs /app/node_modules/bcrypt 2>/dev/null || true && \
+    chown -R nodejs:nodejs /app/node_modules/@esbuild 2>/dev/null || true && \
     chown nodejs:nodejs /app/node_modules 2>/dev/null || true
 
 USER nodejs
