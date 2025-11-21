@@ -68,7 +68,7 @@ export class ApiClient {
       );
 
       if (!response.data.success || !response.data.data) {
-        throw new Error(response.data.error?.message || 'Unknown error');
+        throw new Error(response.data.error?.message || 'Невідома помилка');
       }
 
       return response.data.data;
