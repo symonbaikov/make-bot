@@ -67,20 +67,22 @@ echo "=========================================="
 # Run seed to create admin user
 if [ -n "$DATABASE_URL" ]; then
   echo "Running database seed..."
-  # Seed uses tsx, but we can run it with node if compiled, or use tsx if available
-  # Use npx directly (not npm run) to avoid workspace issues
-  if command -v tsx >/dev/null 2>&1; then
-    tsx prisma/seed.ts || {
-      echo "Warning: Database seed failed with tsx, but continuing..."
-    }
-  elif [ -f "node_modules/.bin/tsx" ]; then
+  # Seed uses tsx - use npx directly to avoid workspace issues
+  # Don't use npm run as it tries to use workspace commands
+  if [ -f "node_modules/.bin/tsx" ]; then
+    echo "Using local tsx binary..."
     node_modules/.bin/tsx prisma/seed.ts || {
-      echo "Warning: Database seed failed, but continuing..."
+      echo "Warning: Database seed failed with local tsx, but continuing..."
+    }
+  elif command -v tsx >/dev/null 2>&1; then
+    echo "Using system tsx..."
+    tsx prisma/seed.ts || {
+      echo "Warning: Database seed failed with system tsx, but continuing..."
     }
   else
-    echo "tsx not found, trying to run seed with npx..."
-    npx tsx prisma/seed.ts || {
-      echo "Warning: Database seed failed, but continuing..."
+    echo "tsx not found, trying npx tsx..."
+    npx --yes tsx prisma/seed.ts || {
+      echo "Warning: Database seed failed with npx tsx, but continuing..."
     }
   fi
 else
