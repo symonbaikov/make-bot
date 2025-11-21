@@ -59,9 +59,10 @@ echo "DATABASE_URL preview: $(echo "$DATABASE_URL" | sed 's/:[^:@]*@/:****@/')"
 chmod -R u+w node_modules/@prisma 2>/dev/null || true
 chmod -R u+w node_modules/.prisma 2>/dev/null || true
 
-# Run prisma db push with verbose output
+# Run prisma db push
 # Use --no-workspaces flag explicitly to prevent npm workspace conflicts
-npx --no-workspaces prisma db push --skip-generate --accept-data-loss --verbose || {
+# Note: --verbose flag is not supported by prisma db push
+npx --no-workspaces prisma db push --skip-generate --accept-data-loss || {
   echo "=========================================="
   echo "ERROR: Database push failed!"
   echo "=========================================="
