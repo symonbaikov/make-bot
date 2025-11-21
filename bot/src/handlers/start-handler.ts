@@ -40,6 +40,12 @@ async function getSessionData(sessionId: string): Promise<SessionData | null> {
 
 export async function handleStart(ctx: BotContext): Promise<void> {
   try {
+    logger.info('Start command received', { 
+      userId: ctx.from?.id,
+      username: ctx.from?.username,
+      messageText: ctx.message && 'text' in ctx.message ? ctx.message.text : null,
+    });
+
     const messageText = ctx.message && 'text' in ctx.message ? ctx.message.text : '';
     const sessionId = messageText ? parseSessionId(messageText) : null;
 
