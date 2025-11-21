@@ -103,7 +103,7 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
     } catch (error) {
       logger.error('Failed to send data to backend', error);
       
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : 'Невідома помилка';
       
       await ctx.reply(
         `❌ Не вдалося обробити вашу інформацію.\n\n` +
