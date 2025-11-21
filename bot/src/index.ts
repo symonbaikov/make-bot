@@ -69,9 +69,9 @@ bot.on('text', async ctx => {
   } else {
     // If not waiting for any data, suggest using /start
     await ctx.reply(
-      '👋 Please use /start to begin.\n\n' +
-        'If you have a session ID, use:\n' +
-        '/start <your_session_id>'
+      '👋 Будь ласка, використайте /start, щоб почати.\n\n' +
+        'Якщо у вас є ID сесії, використайте:\n' +
+        '/start <ваш_id_сесії>'
     );
   }
 });
@@ -79,7 +79,8 @@ bot.on('text', async ctx => {
 // Handle other message types
 bot.on('message', async ctx => {
   await ctx.reply(
-    '📝 Please send text messages only.\n\n' + 'Use /start to begin or /help for more information.'
+    '📝 Будь ласка, надсилайте тільки текстові повідомлення.\n\n' + 
+    'Використайте /start, щоб почати, або /help для отримання додаткової інформації.'
   );
 });
 
