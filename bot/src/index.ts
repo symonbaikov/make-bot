@@ -188,9 +188,10 @@ async function startBot() {
         logger.info(`✅ Health endpoint available at: http://0.0.0.0:${PORT}/health`);
 
         // Delete existing webhook first to avoid conflicts, then set new one
+        // IMPORTANT: drop_pending_updates: true to clear pending updates that weren't delivered
         try {
-          await bot.telegram.deleteWebhook({ drop_pending_updates: false });
-          logger.info('Deleted existing webhook (if any)');
+          await bot.telegram.deleteWebhook({ drop_pending_updates: true });
+          logger.info('Deleted existing webhook and dropped pending updates');
         } catch (error) {
           logger.warn('Failed to delete existing webhook (may not exist)', error);
         }
@@ -198,7 +199,9 @@ async function startBot() {
         // Set webhook URL
         try {
           logger.info(`Setting webhook to: ${WEBHOOK_URL}`);
-          const webhookInfo = await bot.telegram.setWebhook(WEBHOOK_URL);
+          const webhookInfo = await bot.telegram.setWebhook(WEBHOOK_URL, {
+            drop_pending_updates: true, // Clear pending updates when setting webhook
+          });
           logger.info(`✅ Webhook set successfully!`, {
             webhookUrl: WEBHOOK_URL,
             result: webhookInfo,
@@ -223,11 +226,21 @@ async function startBot() {
             });
           }
 
-          // Warn if there are pending updates
+          // Warn if there are pending updates (should be 0 after drop_pending_updates: true)
           if (webhookStatus.pending_update_count > 0) {
             logger.warn('⚠️ There are pending updates that were not delivered', {
               pendingUpdateCount: webhookStatus.pending_update_count,
             });
+            logger.warn('⚠️ Attempting to clear pending updates...');
+            try {
+              // Try to clear pending updates by resetting webhook
+              await bot.telegram.setWebhook(WEBHOOK_URL, {
+                drop_pending_updates: true,
+              });
+              logger.info('✅ Pending updates cleared');
+            } catch (error) {
+              logger.error('❌ Failed to clear pending updates', error);
+            }
           }
         } catch (error) {
           logger.error('❌ Failed to set webhook', {
