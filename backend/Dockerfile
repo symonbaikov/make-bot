@@ -32,9 +32,9 @@ COPY tsconfig.json ./
 
 # Build frontend first (monolithic build)
 WORKDIR /app/frontend
-# Use build:docker script which skips TypeScript check for faster Docker builds
-# Vite will still catch TypeScript errors during bundling
-RUN npm run build:docker || (echo "Frontend build failed!" && exit 1)
+# Use vite directly to avoid workspace issues
+# Skip TypeScript check for faster Docker builds (Vite will catch errors during bundling)
+RUN npx vite build || (echo "Frontend build failed!" && exit 1)
 
 # Build backend
 WORKDIR /app/backend
@@ -45,7 +45,8 @@ ENV PRISMA_SKIP_POSTINSTALL_GENERATE=1
 
 # Generate Prisma client with all binary targets
 # This ensures Query Engine is available for the deployment platform
-RUN npm run db:generate || echo "Warning: Prisma generate failed, will retry at runtime"
+# Use npx directly to avoid workspace issues
+RUN npx prisma generate || echo "Warning: Prisma generate failed, will retry at runtime"
 
 # Build TypeScript to JavaScript - continue even if there are type errors
 RUN npx tsc --skipLibCheck --noEmitOnError false || echo "Built with type warnings"
