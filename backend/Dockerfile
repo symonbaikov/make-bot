@@ -57,6 +57,8 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+# Disable npm scripts to prevent workspace issues
+ENV npm_config_ignore_scripts=true
 
 # Install OpenSSL for Prisma (required for linux-musl binary)
 
@@ -94,7 +96,7 @@ RUN mkdir -p /app/logs && \
 # Set ownership efficiently (critical for fast unpacking)
 # Only chown essential files/dirs, skip deep recursion on node_modules
 # Node.js can read files even if owned by root in most cases
-RUN chown -R nodejs:nodejs /app/dist /app/logs /app/docker-entrypoint.sh /app/package.json /app/prisma && \
+RUN chown -R nodejs:nodejs /app/dist /app/logs /app/docker-entrypoint.sh /app/package.json /app/prisma /app/frontend && \
     chown nodejs:nodejs /app/node_modules 2>/dev/null || true
 
 USER nodejs
