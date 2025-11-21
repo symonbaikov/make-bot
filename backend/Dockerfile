@@ -99,9 +99,11 @@ RUN mkdir -p /app/logs && \
     chmod +x /app/docker-entrypoint.sh
 
 # Set ownership efficiently (critical for fast unpacking)
-# Only chown essential files/dirs, skip deep recursion on node_modules
-# Node.js can read files even if owned by root in most cases
+# CRITICAL: Prisma needs write access to @prisma/engines directory
+# So we need to chown node_modules/@prisma specifically
 RUN chown -R nodejs:nodejs /app/dist /app/logs /app/docker-entrypoint.sh /app/package.json /app/prisma /app/frontend && \
+    chown -R nodejs:nodejs /app/node_modules/@prisma 2>/dev/null || true && \
+    chown -R nodejs:nodejs /app/node_modules/.prisma 2>/dev/null || true && \
     chown nodejs:nodejs /app/node_modules 2>/dev/null || true
 
 USER nodejs

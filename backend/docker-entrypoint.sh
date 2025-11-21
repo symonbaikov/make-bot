@@ -25,6 +25,9 @@ echo "Database is ready!"
 if [ ! -d "node_modules/.prisma/client" ] || [ ! -f "node_modules/.prisma/client/query-engine-linux-musl-openssl-3.0.x" ] && [ ! -f "node_modules/.prisma/client/query-engine-linux-musl-arm64-openssl-3.0.x" ]; then
   echo "Prisma client not found or missing Query Engine, generating..."
   export PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
+  # Ensure Prisma engines directory is writable
+  chmod -R u+w node_modules/@prisma 2>/dev/null || true
+  chmod -R u+w node_modules/.prisma 2>/dev/null || true
   # Use npx with explicit no-workspace flag to prevent conflicts
   npx --no-workspaces prisma generate || {
     echo "Warning: Prisma generate failed, but continuing..."
@@ -51,6 +54,10 @@ fi
 # Use db push (more reliable for Railway, creates tables from schema)
 echo "Applying database schema with db push..."
 echo "DATABASE_URL preview: $(echo "$DATABASE_URL" | sed 's/:[^:@]*@/:****@/')"
+
+# Ensure Prisma engines directory is writable before db push
+chmod -R u+w node_modules/@prisma 2>/dev/null || true
+chmod -R u+w node_modules/.prisma 2>/dev/null || true
 
 # Run prisma db push with verbose output
 # Use --no-workspaces flag explicitly to prevent npm workspace conflicts
