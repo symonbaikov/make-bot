@@ -24,14 +24,15 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
 
     const phoneNumber = normalizePhoneNumber(messageText);
 
-    // Validate phone number
+    // Validate phone number (minimal validation - accepts any reasonable format)
     if (!isValidPhoneNumber(phoneNumber)) {
       await ctx.reply(
-        '❌ Невірний формат номера телефону. Будь ласка, надайте валідний номер телефону.\n\n' +
-        'Приклади:\n' +
+        '❌ Будь ласка, надайте номер телефону.\n\n' +
+        'Можна вказати номер у будь-якому форматі:\n' +
         '• +380123456789\n' +
-        '• +79123456789\n' +
-        '• +441234567890'
+        '• 380123456789\n' +
+        '• +7 912 345 67 89\n' +
+        '• або будь-який інший формат'
       );
       return;
     }
