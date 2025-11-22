@@ -37,7 +37,14 @@ COPY tsconfig.json ./
 WORKDIR /app/frontend
 # Use vite directly to avoid workspace issues
 # Skip TypeScript check for faster Docker builds (Vite will catch errors during bundling)
-RUN npx vite build || (echo "Frontend build failed!" && exit 1)
+# Add cache busting: include git commit hash or timestamp to force rebuild
+# This ensures frontend always rebuilds even if Docker caches the COPY layer
+ARG BUILD_DATE
+ARG GIT_COMMIT
+ENV BUILD_DATE=${BUILD_DATE}
+ENV GIT_COMMIT=${GIT_COMMIT}
+RUN echo "Building frontend - Build date: ${BUILD_DATE}, Commit: ${GIT_COMMIT}" && \
+    npx vite build || (echo "Frontend build failed!" && exit 1)
 
 # Build backend
 WORKDIR /app/backend
