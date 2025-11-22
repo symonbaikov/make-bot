@@ -234,4 +234,3 @@ echo "3. Проверьте настройки Source → Branch"
 4. **Railway не получает webhook** - проверьте GitHub Webhooks
 5. **Проблемы с railway.json** - проверьте синтаксис JSON
 6. **Railway временно недоступен** - проверьте статус страницу
-
