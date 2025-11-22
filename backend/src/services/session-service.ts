@@ -52,6 +52,32 @@ export class SessionService {
     });
   }
 
+  async findLatestByEmail(email: string): Promise<Prisma.SessionGetPayload<{
+    include: {
+      user: true;
+    };
+  }> | null> {
+    return prisma.session.findFirst({
+      where: {
+        OR: [
+          { emailUser: { equals: email, mode: 'insensitive' } },
+          { emailPaypal: { equals: email, mode: 'insensitive' } },
+          {
+            user: {
+              email: { equals: email, mode: 'insensitive' },
+            },
+          },
+        ],
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        user: true,
+      },
+    });
+  }
+
   async create(data: {
     sessionId: string;
     plan: Plan;
@@ -161,6 +187,9 @@ export class SessionService {
     paymentDate?: Date;
     status?: SessionStatus;
     meta?: Record<string, unknown>;
+    amount?: number;
+    currency?: string;
+    userId?: string;
   }): Promise<Prisma.SessionGetPayload<Record<string, never>>> {
     const session = await this.findBySessionId(data.sessionId);
     if (!session) {
@@ -173,13 +202,22 @@ export class SessionService {
       throw new ValidationError('Transaction ID already exists');
     }
 
+    const paymentDate = data.paymentDate || session.paymentDate || new Date();
+    const endDate =
+      session.endDate ||
+      (paymentDate ? this.calculateEndDate(paymentDate) : undefined);
+
     const updatedSession = await prisma.session.update({
       where: { sessionId: data.sessionId },
       data: {
         txnId: data.txnId,
         emailPaypal: data.emailPaypal,
-        paymentDate: data.paymentDate || new Date(),
+        paymentDate,
         status: data.status || SessionStatus.PAID,
+        amount: data.amount !== undefined ? data.amount : session.amount,
+        currency: data.currency || session.currency,
+        userId: data.userId || session.userId,
+        endDate,
         meta: ({
           ...((session.meta as Record<string, unknown>) || {}),
           ...(data.meta || {}),
@@ -195,11 +233,71 @@ export class SessionService {
       payload: {
         txnId: data.txnId,
         emailPaypal: data.emailPaypal,
-        paymentDate: data.paymentDate,
+        paymentDate,
+        amount: data.amount,
+        currency: data.currency,
+        status: data.status || SessionStatus.PAID,
       },
     });
 
     return updatedSession;
+  }
+
+  async createFromPayment(data: {
+    sessionId: string;
+    txnId: string;
+    plan: Plan;
+    amount: number;
+    currency?: string;
+    emailPaypal?: string;
+    paymentDate?: Date;
+    status?: SessionStatus;
+    userId?: string;
+    meta?: Record<string, unknown>;
+  }): Promise<Prisma.SessionGetPayload<Record<string, never>>> {
+    const paymentDate = data.paymentDate || new Date();
+    const endDate = this.calculateEndDate(paymentDate);
+
+    const session = await prisma.session.create({
+      data: {
+        sessionId: data.sessionId,
+        plan: data.plan,
+        amount: data.amount,
+        currency: data.currency || 'USD',
+        status: data.status || SessionStatus.PAID,
+        txnId: data.txnId,
+        emailPaypal: data.emailPaypal,
+        paymentDate,
+        endDate,
+        userId: data.userId,
+        meta: (data.meta || {}) as Prisma.InputJsonValue,
+      },
+    });
+
+    // Log session creation
+    await actionService.create({
+      type: ActionType.SESSION_CREATED,
+      ref: session.sessionId,
+      sessionId: session.id,
+      payload: { plan: data.plan, amount: data.amount, source: 'paypal_ipn' },
+    });
+
+    // Log payment received
+    await actionService.create({
+      type: ActionType.PAYMENT_RECEIVED,
+      ref: data.txnId,
+      sessionId: session.id,
+      payload: {
+        txnId: data.txnId,
+        emailPaypal: data.emailPaypal,
+        paymentDate,
+        amount: data.amount,
+        currency: data.currency || 'USD',
+        status: data.status || SessionStatus.PAID,
+      },
+    });
+
+    return session;
   }
 
   async updateEmail(sessionId: string, email: string): Promise<Prisma.SessionGetPayload<Record<string, never>>> {
@@ -340,4 +438,3 @@ export class SessionService {
 }
 
 export const sessionService = new SessionService();
-
