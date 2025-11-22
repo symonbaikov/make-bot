@@ -39,18 +39,35 @@ export class MakeService {
     logger.info('Sending webhook to Make', { 
       sessionId, 
       event: (data as any).event,
-      webhookUrl: this.webhookUrl.replace(/\/[^\/]+$/, '/****') // Mask URL for logging
+      webhookUrl: this.webhookUrl.replace(/\/[^\/]+$/, '/****'), // Mask URL for logging
+      dataSize: JSON.stringify(data).length,
+      dataKeys: Object.keys(data),
     });
 
     try {
-      await axios.post(this.webhookUrl, data, {
+      // Log the exact payload being sent
+      logger.debug('Make webhook payload', {
+        sessionId,
+        payload: JSON.stringify(data),
+      });
+
+      const response = await axios.post(this.webhookUrl, data, {
         timeout: 10000, // 10 seconds timeout
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-      logger.info('Webhook sent to Make successfully', { sessionId });
+      logger.info('Make webhook response received', {
+        sessionId,
+        status: response.status,
+        statusText: response.statusText,
+      });
+
+      logger.info('✅ Webhook sent to Make successfully', { 
+        sessionId,
+        responseStatus: response.status,
+      });
 
       // Log successful webhook
       if (sessionId) {
@@ -62,11 +79,14 @@ export class MakeService {
       }
     } catch (error) {
       const axiosError = error as AxiosError;
-      logger.error('Failed to send webhook to Make', {
+      logger.error('❌ Failed to send webhook to Make', {
         error: axiosError.message,
         status: axiosError.response?.status,
+        statusText: axiosError.response?.statusText,
+        responseData: axiosError.response?.data,
         sessionId,
         retries,
+        payload: JSON.stringify(data),
       });
 
       // Retry logic with exponential backoff

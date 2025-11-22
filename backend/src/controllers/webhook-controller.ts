@@ -16,6 +16,15 @@ export class WebhookController {
   botWebhook = asyncHandler(async (req: Request<unknown, unknown, BotWebhookInput>, res: Response) => {
     const data = req.body;
 
+    // Log incoming webhook data for debugging
+    logger.info('📥 Bot webhook received', {
+      body: JSON.stringify(data),
+      bodyKeys: Object.keys(data),
+      contentType: req.get('content-type'),
+      bodyType: typeof data,
+      isEmpty: !data || Object.keys(data).length === 0,
+    });
+
     // Upsert session with email
     const session = await sessionService.upsertBySessionId({
       sessionId: data.sessionId as string,
@@ -69,6 +78,15 @@ export class WebhookController {
    */
   paypalWebhook = asyncHandler(async (req: Request<unknown, unknown, PayPalWebhookInput>, res: Response) => {
     const data = req.body;
+
+    // Log incoming webhook data for debugging
+    logger.info('📥 PayPal webhook received', {
+      body: JSON.stringify(data),
+      bodyKeys: Object.keys(data),
+      contentType: req.get('content-type'),
+      bodyType: typeof data,
+      isEmpty: !data || Object.keys(data).length === 0,
+    });
 
     // Extract session_id from custom parameter or request body
     const sessionId = data.custom || data.sessionId;
