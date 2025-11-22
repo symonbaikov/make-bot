@@ -6,6 +6,7 @@
 export function isValidPhoneNumber(phone: string): boolean {
   // Accept any non-empty string as a valid phone number
   // Just check that it's not empty and has at least one character
+  // Using Boolean() wrapper to ensure return type is always boolean (not string | boolean)
   return Boolean(phone && phone.trim().length > 0);
 }
 
