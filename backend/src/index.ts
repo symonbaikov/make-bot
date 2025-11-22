@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
 // Sentry is initialized in utils/sentry.ts
+// Test: Railway deployment trigger - checking if Railway picks up backend changes
 import { logger } from './utils/logger';
 import { initSentry } from './utils/sentry';
 import { requestLogger } from './middleware/request-logger';
