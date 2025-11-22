@@ -1,34 +1,21 @@
-import validator from 'validator';
-
 /**
  * Validate phone number format
- * Supports international format with or without + sign
+ * Accepts any non-empty string as a valid phone number
+ * This allows users to enter any phone number format they want
  */
 export function isValidPhoneNumber(phone: string): boolean {
-  // Remove spaces and dashes for validation
-  const cleaned = phone.replace(/[\s-]/g, '');
-  
-  // Check if it's a valid mobile phone number
-  // This accepts international format with or without +
-  return validator.isMobilePhone(cleaned, 'any', { strictMode: false });
+  // Accept any non-empty string as a valid phone number
+  // Just check that it's not empty and has at least one character
+  return phone && phone.trim().length > 0;
 }
 
 /**
- * Normalize phone number (remove spaces, dashes, ensure + prefix for international)
+ * Normalize phone number (remove extra spaces, keep original format)
+ * Preserves user's input format - just trims whitespace
  */
 export function normalizePhoneNumber(phone: string): string {
-  // Remove spaces, dashes, parentheses
-  let cleaned = phone.replace(/[\s\-()]/g, '');
-  
-  // If doesn't start with +, try to add it if it looks like international number
-  if (!cleaned.startsWith('+')) {
-    // If starts with country code (like 1, 7, etc.), add +
-    // This is a simple heuristic - you might want to improve it
-    if (cleaned.length > 10 && /^[1-9]\d{1,14}$/.test(cleaned)) {
-      cleaned = '+' + cleaned;
-    }
-  }
-  
-  return cleaned;
+  // Just trim whitespace from start and end
+  // Keep the original format as user entered it
+  return phone.trim();
 }
 
