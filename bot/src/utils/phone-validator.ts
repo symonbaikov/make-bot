@@ -6,7 +6,7 @@
 export function isValidPhoneNumber(phone: string): boolean {
   // Accept any non-empty string as a valid phone number
   // Just check that it's not empty and has at least one character
-  return phone && phone.trim().length > 0;
+  return Boolean(phone && phone.trim().length > 0);
 }
 
 /**
@@ -18,4 +18,3 @@ export function normalizePhoneNumber(phone: string): string {
   // Keep the original format as user entered it
   return phone.trim();
 }
-

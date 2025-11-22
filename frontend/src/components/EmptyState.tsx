@@ -6,7 +6,7 @@ interface EmptyStateProps {
     onClick: () => void;
   };
 }
-
+//TODO: add icon
 export function EmptyState({
   title = 'Немає даних',
   message = 'Немає даних для відображення.',
