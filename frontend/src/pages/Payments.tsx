@@ -8,6 +8,10 @@ import { Error } from '../components/Error';
 import { EmptyState } from '../components/EmptyState';
 import { SendEmailModal } from '../components/SendEmailModal';
 import { format } from 'date-fns';
+import { GlassCard } from '../components/ui/GlassCard';
+import { Button3D } from '../components/ui/Button3D';
+import { motion } from 'framer-motion';
+import { Search, Filter, Calendar, Mail, Eye } from 'lucide-react';
 
 export function Payments() {
   const [params, setParams] = useState<ListSessionsParams>({
@@ -35,15 +39,15 @@ export function Payments() {
 
   const getStatusColor = (status: SessionStatus) => {
     const colors: Record<SessionStatus, string> = {
-      STARTED: 'bg-gray-100 text-gray-800',
-      AWAITING_PAYMENT: 'bg-yellow-100 text-yellow-800',
-      PAID: 'bg-blue-100 text-blue-800',
-      PAID_PENDING_EMAIL: 'bg-orange-100 text-orange-800',
-      COMPLETED: 'bg-green-100 text-green-800',
-      REFUNDED: 'bg-red-100 text-red-800',
-      FAILED: 'bg-red-100 text-red-800',
+      STARTED: 'bg-gray-500/20 text-gray-300 border-gray-500/50',
+      AWAITING_PAYMENT: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50',
+      PAID: 'bg-blue-500/20 text-blue-300 border-blue-500/50',
+      PAID_PENDING_EMAIL: 'bg-orange-500/20 text-orange-300 border-orange-500/50',
+      COMPLETED: 'bg-green-500/20 text-green-300 border-green-500/50',
+      REFUNDED: 'bg-red-500/20 text-red-300 border-red-500/50',
+      FAILED: 'bg-red-500/20 text-red-300 border-red-500/50',
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return colors[status] || 'bg-gray-500/20 text-gray-300 border-gray-500/50';
   };
 
   if (isLoading) return <Loading />;
@@ -57,209 +61,211 @@ export function Payments() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Платежі</h1>
-      </div>
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex justify-between items-center"
+      >
+        <h1 className="text-3xl font-bold text-white">Платежі</h1>
+      </motion.div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Статус</label>
-            <select
-              value={params.status || ''}
-              onChange={e => handleFilterChange('status', e.target.value || undefined)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Всі</option>
-              {SessionStatusValues.map(status => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <GlassCard className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2 flex items-center">
+                <Filter className="w-4 h-4 mr-2" /> Статус
+              </label>
+              <select
+                value={params.status || ''}
+                onChange={e => handleFilterChange('status', e.target.value || undefined)}
+                className="w-full px-4 py-2 bg-black/20 border border-glass-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              >
+                <option value="" className="bg-surface">Всі</option>
+                {SessionStatusValues.map(status => (
+                  <option key={status} value={status} className="bg-surface">
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">План</label>
+              <select
+                value={params.plan || ''}
+                onChange={e => handleFilterChange('plan', e.target.value || undefined)}
+                className="w-full px-4 py-2 bg-black/20 border border-glass-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              >
+                <option value="" className="bg-surface">Всі</option>
+                {PlanValues.map(plan => (
+                  <option key={plan} value={plan} className="bg-surface">
+                    {plan}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2 flex items-center">
+                <Search className="w-4 h-4 mr-2" /> Пошук
+              </label>
+              <input
+                type="text"
+                placeholder="ID сесії, Email..."
+                value={params.search || ''}
+                onChange={e => handleFilterChange('search', e.target.value || undefined)}
+                className="w-full px-4 py-2 bg-black/20 border border-glass-border rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2 flex items-center">
+                <Calendar className="w-4 h-4 mr-2" /> Дата початку
+              </label>
+              <input
+                type="date"
+                value={params.startDate || ''}
+                onChange={e => handleFilterChange('startDate', e.target.value || undefined)}
+                className="w-full px-4 py-2 bg-black/20 border border-glass-border rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all [color-scheme:dark]"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">План</label>
-            <select
-              value={params.plan || ''}
-              onChange={e => handleFilterChange('plan', e.target.value || undefined)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Всі</option>
-              {PlanValues.map(plan => (
-                <option key={plan} value={plan}>
-                  {plan}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Пошук</label>
-            <input
-              type="text"
-              placeholder="ID сесії, Email, ID транзакції..."
-              value={params.search || ''}
-              onChange={e => handleFilterChange('search', e.target.value || undefined)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Дата початку</label>
-            <input
-              type="date"
-              value={params.startDate || ''}
-              onChange={e => handleFilterChange('startDate', e.target.value || undefined)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-        </div>
-      </div>
+        </GlassCard>
+      </motion.div>
 
       {/* Table */}
-      {data && data.data.length === 0 ? (
-        <EmptyState title="Платежі не знайдено" message="Спробуйте змінити фільтри." />
-      ) : (
-        <>
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ID сесії
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Користувач
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    План
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Сума
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Статус
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Дата
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Дії
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {data?.data.map(session => (
-                  <tr key={session.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {session.sessionId}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {session.user?.firstName || session.user?.lastName
-                        ? `${session.user.firstName || ''} ${session.user.lastName || ''}`.trim()
-                        : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {session.finalEmail || session.emailUser || session.emailPaypal || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {session.plan}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      ${session.amount} {session.currency}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(session.status)}`}
-                      >
-                        {session.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(session.createdAt), 'MMM dd, yyyy')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-3">
-                        {(session.finalEmail || session.emailUser || session.emailPaypal) && (
-                          <button
-                            onClick={() => {
-                              const finalEmail =
-                                session.finalEmail ||
-                                session.emailUser ||
-                                session.emailPaypal ||
-                                '';
-                              const userName =
-                                session.user?.firstName || session.user?.lastName
-                                  ? `${session.user.firstName || ''} ${session.user.lastName || ''}`.trim()
-                                  : undefined;
-                              setSelectedSession({
-                                sessionId: session.sessionId,
-                                email: finalEmail,
-                                userName,
-                              });
-                            }}
-                            className="text-blue-600 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-                            title="Відправити email"
-                          >
-                            <svg
-                              className="h-5 w-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                              />
-                            </svg>
-                          </button>
-                        )}
-                        <Link
-                          to={`/payments/${session.sessionId}`}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          Переглянути
-                        </Link>
-                      </div>
-                    </td>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        {data && data.data.length === 0 ? (
+          <EmptyState title="Платежі не знайдено" message="Спробуйте змінити фільтри." />
+        ) : (
+          <GlassCard className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-glass-border">
+                <thead className="bg-white/5">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">ID сесії</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Користувач</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Email</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">План</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Сума</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Статус</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Дата</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Дії</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {data && data.totalPages > 1 && (
-            <div className="flex items-center justify-between bg-white px-4 py-3 rounded-lg shadow">
-              <div className="text-sm text-gray-700">
-                Показано {(data.page - 1) * data.limit + 1} до{' '}
-                {Math.min(data.page * data.limit, data.total)} з {data.total} результатів
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handlePageChange(data.page - 1)}
-                  disabled={data.page === 1}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Попередня
-                </button>
-                <button
-                  onClick={() => handlePageChange(data.page + 1)}
-                  disabled={data.page >= data.totalPages}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Наступна
-                </button>
-              </div>
+                </thead>
+                <tbody className="divide-y divide-glass-border">
+                  {data?.data.map((session, index) => (
+                    <motion.tr 
+                      key={session.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="hover:bg-white/5 transition-colors"
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                        {session.sessionId}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        {session.user?.firstName || session.user?.lastName
+                          ? `${session.user.firstName || ''} ${session.user.lastName || ''}`.trim()
+                          : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        {session.finalEmail || session.emailUser || session.emailPaypal || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        {session.plan}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        ${session.amount} {session.currency}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-3 py-1 text-xs font-bold rounded-full border ${getStatusColor(session.status)}`}
+                        >
+                          {session.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                        {format(new Date(session.createdAt), 'MMM dd, yyyy')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex items-center space-x-3">
+                          {(session.finalEmail || session.emailUser || session.emailPaypal) && (
+                            <button
+                              onClick={() => {
+                                const finalEmail =
+                                  session.finalEmail ||
+                                  session.emailUser ||
+                                  session.emailPaypal ||
+                                  '';
+                                const userName =
+                                  session.user?.firstName || session.user?.lastName
+                                    ? `${session.user.firstName || ''} ${session.user.lastName || ''}`.trim()
+                                    : undefined;
+                                setSelectedSession({
+                                  sessionId: session.sessionId,
+                                  email: finalEmail,
+                                  userName,
+                                });
+                              }}
+                              className="text-primary hover:text-primary/80 transition-colors"
+                              title="Відправити email"
+                            >
+                              <Mail className="w-5 h-5" />
+                            </button>
+                          )}
+                          <Link
+                            to={`/payments/${session.sessionId}`}
+                            className="text-primary hover:text-primary/80 transition-colors"
+                          >
+                            <Eye className="w-5 h-5" />
+                          </Link>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
-        </>
-      )}
+
+            {/* Pagination */}
+            {data && data.totalPages > 1 && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-glass-border">
+                <div className="text-sm text-gray-400">
+                  Показано {(data.page - 1) * data.limit + 1} до{' '}
+                  {Math.min(data.page * data.limit, data.total)} з {data.total} результатів
+                </div>
+                <div className="flex space-x-2">
+                  <Button3D
+                    onClick={() => handlePageChange(data.page - 1)}
+                    disabled={data.page === 1}
+                    variant="secondary"
+                    className="px-4 py-1 text-xs"
+                  >
+                    Попередня
+                  </Button3D>
+                  <Button3D
+                    onClick={() => handlePageChange(data.page + 1)}
+                    disabled={data.page >= data.totalPages}
+                    variant="secondary"
+                    className="px-4 py-1 text-xs"
+                  >
+                    Наступна
+                  </Button3D>
+                </div>
+              </div>
+            )}
+          </GlassCard>
+        )}
+      </motion.div>
 
       {/* Send Email Modal */}
       {selectedSession && (
