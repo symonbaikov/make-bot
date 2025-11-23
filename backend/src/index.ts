@@ -341,8 +341,10 @@ function startServer() {
   // API Routes (must be before static files)
   const webhookRoutes = require('./routes/webhook-routes').default;
   const adminRoutes = require('./routes/admin-routes').default;
+  const aiChatRoutes = require('./routes/ai-chat-routes').default;
   app.use('/api/webhook', webhookRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/admin/ai-chat', aiChatRoutes);
 
   // Serve static files from frontend build (in production)
   // In development, frontend is served by Vite dev server

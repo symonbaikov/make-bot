@@ -10,6 +10,7 @@ import { Payments } from './pages/Payments';
 import { PaymentDetails } from './pages/PaymentDetails';
 import { Actions } from './pages/Actions';
 import { Reports } from './pages/Reports';
+import { AIChat } from './pages/AIChat';
 import { CreateSession } from './pages/CreateSession';
 
 function App() {
@@ -75,6 +76,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <Reports />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ai-chat"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <AIChat />
               </Layout>
             </ProtectedRoute>
           }

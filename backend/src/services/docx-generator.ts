@@ -8,9 +8,7 @@ import {
   TableCell,
   WidthType,
   AlignmentType,
-  BorderStyle,
   HeadingLevel,
-  convertInchesToTwip,
 } from 'docx';
 import { Response } from 'express';
 import { ReportData, ReportSummary } from './gemini-service';
@@ -228,22 +226,42 @@ export class DOCXGenerator {
         // Header row
         new TableRow({
           children: [
-            new TableCell({
-              children: [new Paragraph({ text: 'Plan', bold: true, alignment: AlignmentType.CENTER })],
-              shading: { fill: '6366F1' },
-            }),
-            new TableCell({
-              children: [new Paragraph({ text: 'Sessions', bold: true, alignment: AlignmentType.CENTER })],
-              shading: { fill: '6366F1' },
-            }),
-            new TableCell({
-              children: [new Paragraph({ text: 'Revenue', bold: true, alignment: AlignmentType.CENTER })],
-              shading: { fill: '6366F1' },
-            }),
-            new TableCell({
-              children: [new Paragraph({ text: 'Percentage', bold: true, alignment: AlignmentType.CENTER })],
-              shading: { fill: '6366F1' },
-            }),
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [new TextRun({ text: 'Plan', bold: true })],
+                alignment: AlignmentType.CENTER,
+              }),
+            ],
+            shading: { fill: '6366F1' },
+          }),
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [new TextRun({ text: 'Sessions', bold: true })],
+                alignment: AlignmentType.CENTER,
+              }),
+            ],
+            shading: { fill: '6366F1' },
+          }),
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [new TextRun({ text: 'Revenue', bold: true })],
+                alignment: AlignmentType.CENTER,
+              }),
+            ],
+            shading: { fill: '6366F1' },
+          }),
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [new TextRun({ text: 'Percentage', bold: true })],
+                alignment: AlignmentType.CENTER,
+              }),
+            ],
+            shading: { fill: '6366F1' },
+          }),
           ],
         }),
         // Data rows
@@ -313,9 +331,13 @@ export class DOCXGenerator {
     if (sessions.length === 0) {
       elements.push(
         new Paragraph({
-          text: 'No sessions found for the selected period.',
-          italics: true,
-          color: '6B7280',
+          children: [
+            new TextRun({
+              text: 'No sessions found for the selected period.',
+              italics: true,
+              color: '6B7280',
+            }),
+          ],
         })
       );
       return elements;
@@ -334,23 +356,48 @@ export class DOCXGenerator {
         new TableRow({
           children: [
             new TableCell({
-              children: [new Paragraph({ text: 'Session ID', bold: true, alignment: AlignmentType.CENTER })],
+              children: [
+                new Paragraph({
+                  children: [new TextRun({ text: 'Session ID', bold: true })],
+                  alignment: AlignmentType.CENTER,
+                }),
+              ],
               shading: { fill: '6366F1' },
             }),
             new TableCell({
-              children: [new Paragraph({ text: 'Plan', bold: true, alignment: AlignmentType.CENTER })],
+              children: [
+                new Paragraph({
+                  children: [new TextRun({ text: 'Plan', bold: true })],
+                  alignment: AlignmentType.CENTER,
+                }),
+              ],
               shading: { fill: '6366F1' },
             }),
             new TableCell({
-              children: [new Paragraph({ text: 'Amount', bold: true, alignment: AlignmentType.CENTER })],
+              children: [
+                new Paragraph({
+                  children: [new TextRun({ text: 'Amount', bold: true })],
+                  alignment: AlignmentType.CENTER,
+                }),
+              ],
               shading: { fill: '6366F1' },
             }),
             new TableCell({
-              children: [new Paragraph({ text: 'Status', bold: true, alignment: AlignmentType.CENTER })],
+              children: [
+                new Paragraph({
+                  children: [new TextRun({ text: 'Status', bold: true })],
+                  alignment: AlignmentType.CENTER,
+                }),
+              ],
               shading: { fill: '6366F1' },
             }),
             new TableCell({
-              children: [new Paragraph({ text: 'Date', bold: true, alignment: AlignmentType.CENTER })],
+              children: [
+                new Paragraph({
+                  children: [new TextRun({ text: 'Date', bold: true })],
+                  alignment: AlignmentType.CENTER,
+                }),
+              ],
               shading: { fill: '6366F1' },
             }),
           ],
@@ -416,9 +463,13 @@ export class DOCXGenerator {
     if (sessions.length > maxRows) {
       elements.push(
         new Paragraph({
-          text: `... and ${sessions.length - maxRows} more sessions`,
-          italics: true,
-          color: '6B7280',
+          children: [
+            new TextRun({
+              text: `... and ${sessions.length - maxRows} more sessions`,
+              italics: true,
+              color: '6B7280',
+            }),
+          ],
           alignment: AlignmentType.CENTER,
           spacing: { before: 100 },
         })

@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ReactNode } from 'react';
-import { LayoutDashboard, CreditCard, Activity, PlusCircle, LogOut, User, FileText } from 'lucide-react';
+import { LayoutDashboard, CreditCard, Activity, PlusCircle, LogOut, User, FileText, MessageSquare } from 'lucide-react';
 import { PageTransition } from './ui/PageTransition';
 import { motion } from 'framer-motion';
 
@@ -24,6 +24,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Платежі', href: '/payments', icon: CreditCard },
     { name: 'Журнал активності', href: '/actions', icon: Activity },
     { name: 'Звіти', href: '/reports', icon: FileText },
+    { name: 'Чат з ІІ', href: '/ai-chat', icon: MessageSquare },
     { name: 'Створити сесію', href: '/sessions/create', icon: PlusCircle },
   ];
 
