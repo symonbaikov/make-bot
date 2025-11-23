@@ -3,8 +3,10 @@ import { motion } from 'framer-motion';
 import { FileDown, Calendar, Filter, Download } from 'lucide-react';
 import { format as formatDate } from 'date-fns';
 import { uk } from 'date-fns/locale';
+import { apiService } from '../services/api';
+import { SessionStatus, Plan } from '../types';
 
-type ReportFormat = 'csv' | 'excel';
+type ReportFormat = 'csv' | 'excel' | 'pdf' | 'docx';
 
 type ReportPeriod = 'current_month' | 'last_month' | 'last_3_months' | 'last_6_months' | 'current_year' | 'custom';
 
@@ -66,40 +68,26 @@ export function Reports() {
     setIsGenerating(true);
     try {
       const dateRange = getDateRange();
-      const params = new URLSearchParams({
+
+      // Use shared API client to include auth header automatically
+      const blob = await apiService.downloadExport({
         startDate: dateRange.start,
         endDate: dateRange.end,
+        status: status === 'all' ? undefined : (status.toUpperCase() as SessionStatus),
+        plan: plan === 'all' ? undefined : (plan.toUpperCase() as Plan),
         format,
       });
 
-      if (status !== 'all') {
-        params.append('status', status);
-      }
-
-      if (plan !== 'all') {
-        params.append('plan', plan);
-      }
-
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/admin/export?${params.toString()}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to generate report');
-      }
-
-      // Download the file
-      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `report-${dateRange.start}-${dateRange.end}.${format === 'excel' ? 'csv' : 'csv'}`;
+      
+      // Set proper file extension
+      let extension = 'csv';
+      if (format === 'pdf') extension = 'pdf';
+      else if (format === 'docx') extension = 'docx';
+      
+      a.download = `report-${dateRange.start}-${dateRange.end}.${extension}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -251,29 +239,71 @@ export function Reports() {
           {/* Format Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-3">
-              Формат
+              Формат експорту
             </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setFormat('csv')}
-                className={`px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                  format === 'csv'
-                    ? 'bg-primary/20 text-primary border-2 border-primary shadow-[0_0_20px_rgba(99,102,241,0.3)]'
-                    : 'bg-white/5 text-gray-300 border-2 border-transparent hover:bg-white/10'
-                }`}
-              >
-                CSV
-              </button>
-              <button
-                onClick={() => setFormat('excel')}
-                className={`px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                  format === 'excel'
-                    ? 'bg-primary/20 text-primary border-2 border-primary shadow-[0_0_20px_rgba(99,102,241,0.3)]'
-                    : 'bg-white/5 text-gray-300 border-2 border-transparent hover:bg-white/10'
-                }`}
-              >
-                Excel (CSV)
-              </button>
+            <div className="space-y-3">
+              {/* Standard Formats */}
+              <div>
+                <p className="text-xs text-gray-400 mb-2">Стандартні формати</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setFormat('csv')}
+                    className={`px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                      format === 'csv'
+                        ? 'bg-primary/20 text-primary border-2 border-primary shadow-[0_0_20px_rgba(99,102,241,0.3)]'
+                        : 'bg-white/5 text-gray-300 border-2 border-transparent hover:bg-white/10'
+                    }`}
+                  >
+                    📊 CSV
+                  </button>
+                  <button
+                    onClick={() => setFormat('excel')}
+                    className={`px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                      format === 'excel'
+                        ? 'bg-primary/20 text-primary border-2 border-primary shadow-[0_0_20px_rgba(99,102,241,0.3)]'
+                        : 'bg-white/5 text-gray-300 border-2 border-transparent hover:bg-white/10'
+                    }`}
+                  >
+                    📈 Excel
+                  </button>
+                </div>
+              </div>
+              
+              {/* AI-Enhanced Formats */}
+              <div>
+                <p className="text-xs text-gray-400 mb-2 flex items-center">
+                  <span className="mr-2">🤖</span>
+                  AI-Enhanced формати (з аналізом та рекомендаціями)
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setFormat('pdf')}
+                    className={`px-4 py-3 rounded-xl text-sm font-medium transition-all relative ${
+                      format === 'pdf'
+                        ? 'bg-gradient-to-r from-primary to-secondary text-white border-2 border-primary shadow-[0_0_20px_rgba(99,102,241,0.5)]'
+                        : 'bg-white/5 text-gray-300 border-2 border-transparent hover:bg-white/10'
+                    }`}
+                  >
+                    📄 PDF
+                    <span className="absolute top-1 right-1 text-xs bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-1.5 py-0.5 rounded-full">
+                      AI
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setFormat('docx')}
+                    className={`px-4 py-3 rounded-xl text-sm font-medium transition-all relative ${
+                      format === 'docx'
+                        ? 'bg-gradient-to-r from-primary to-secondary text-white border-2 border-primary shadow-[0_0_20px_rgba(99,102,241,0.5)]'
+                        : 'bg-white/5 text-gray-300 border-2 border-transparent hover:bg-white/10'
+                    }`}
+                  >
+                    📝 DOCX
+                    <span className="absolute top-1 right-1 text-xs bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-1.5 py-0.5 rounded-full">
+                      AI
+                    </span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -345,9 +375,37 @@ export function Reports() {
             <span className="text-primary mr-2">•</span>
             <span>Інформація про користувача (ім'я, прізвище)</span>
           </li>
+          {(format === 'pdf' || format === 'docx') && (
+            <>
+              <li className="flex items-start border-t border-glass-border mt-3 pt-3">
+                <span className="text-secondary mr-2">🤖</span>
+                <span className="text-secondary font-semibold">AI-аналіз продуктивності</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-secondary mr-2">📊</span>
+                <span>Ключові метрики з візуалізацією</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-secondary mr-2">💡</span>
+                <span>Інсайти та рекомендації від AI</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-secondary mr-2">📈</span>
+                <span>Розбивка по тарифах з аналізом</span>
+              </li>
+            </>
+          )}
         </ul>
+        
+        {(format === 'pdf' || format === 'docx') && (
+          <div className="mt-4 p-3 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-lg border border-yellow-500/20">
+            <p className="text-xs text-yellow-200 flex items-center">
+              <span className="mr-2">⚡</span>
+              AI-формати можуть генеруватись довше (15-30 секунд) через аналіз даних
+            </p>
+          </div>
+        )}
       </motion.div>
     </div>
   );
 }
-

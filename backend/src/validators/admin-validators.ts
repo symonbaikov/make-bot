@@ -56,7 +56,7 @@ export const exportSchema = z.object({
   plan: z.nativeEnum(Plan).optional(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
-  format: z.enum(['csv', 'excel']).default('csv'),
+  format: z.enum(['csv', 'excel', 'pdf', 'docx']).default('csv'),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;

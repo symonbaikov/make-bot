@@ -208,6 +208,32 @@ export const apiService = {
     }
     return response.data.data;
   },
+
+  async downloadExport(params: {
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+    plan?: string;
+    format?: 'csv' | 'excel' | 'pdf' | 'docx';
+  }): Promise<Blob> {
+    // Set appropriate Accept header based on format
+    let acceptHeader = 'text/csv';
+    if (params.format === 'pdf') {
+      acceptHeader = 'application/pdf';
+    } else if (params.format === 'docx') {
+      acceptHeader = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
+    
+    const response = await api.get<Blob>('/api/admin/export', {
+      params,
+      responseType: 'blob',
+      headers: {
+        Accept: acceptHeader,
+      },
+    });
+
+    return response.data;
+  },
 };
 
 export default api;

@@ -2,13 +2,17 @@ import { prisma } from '../utils/prisma';
 import { Prisma, Plan, SessionStatus } from '@prisma/client';
 import { Response } from 'express';
 import { format as formatDate } from 'date-fns';
+import { geminiService, ReportData } from './gemini-service';
+import { pdfGenerator } from './pdf-generator';
+import { docxGenerator } from './docx-generator';
+import { logger } from '../utils/logger';
 
 export interface ExportParams {
   status?: SessionStatus;
   plan?: Plan;
   startDate?: Date;
   endDate?: Date;
-  format?: 'csv' | 'excel';
+  format?: 'csv' | 'excel' | 'pdf' | 'docx';
 }
 
 export class ExportService {
@@ -48,9 +52,60 @@ export class ExportService {
 
     if (format === 'csv') {
       await this.exportToCSV(sessions, res);
-    } else {
-      // For Excel, we'll use CSV format (can be opened in Excel)
+    } else if (format === 'excel') {
       await this.exportToCSV(sessions, res, 'excel');
+    } else if (format === 'pdf' || format === 'docx') {
+      await this.exportWithAI(sessions, params, res, format);
+    }
+  }
+
+  private async exportWithAI(
+    sessions: any[],
+    params: ExportParams,
+    res: Response,
+    format: 'pdf' | 'docx'
+  ): Promise<void> {
+    try {
+      logger.info(`Generating ${format.toUpperCase()} report with AI for ${sessions.length} sessions`);
+
+      // Prepare data for AI
+      const reportData: ReportData[] = sessions.map((session) => ({
+        sessionId: session.sessionId,
+        txnId: session.txnId,
+        plan: session.plan,
+        emailUser: session.emailUser,
+        emailPaypal: session.emailPaypal,
+        amount: Number(session.amount),
+        currency: session.currency,
+        status: session.status,
+        paymentDate: session.paymentDate,
+        endDate: session.endDate,
+        createdAt: session.createdAt,
+        user: session.user,
+      }));
+
+      // Generate AI summary
+      const startDate = params.startDate
+        ? formatDate(params.startDate, 'yyyy-MM-dd')
+        : formatDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
+      const endDate = params.endDate ? formatDate(params.endDate, 'yyyy-MM-dd') : formatDate(new Date(), 'yyyy-MM-dd');
+
+      logger.info('Generating AI summary...');
+      const summary = await geminiService.generateReportSummary(reportData, startDate, endDate);
+
+      // Generate document
+      if (format === 'pdf') {
+        logger.info('Generating PDF document...');
+        await pdfGenerator.generateReport(reportData, summary, res);
+      } else {
+        logger.info('Generating DOCX document...');
+        await docxGenerator.generateReport(reportData, summary, res);
+      }
+
+      logger.info(`${format.toUpperCase()} report generated successfully`);
+    } catch (error) {
+      logger.error(`Error generating ${format.toUpperCase()} report:`, error);
+      throw error;
     }
   }
 

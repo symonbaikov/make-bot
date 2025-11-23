@@ -57,22 +57,22 @@ Each report includes the following information:
 
 Кожен звіт містить наступну інформацію:
 
-| Column | Description / Опис |
-|--------|-------------------|
-| Session ID | Unique session identifier / Унікальний ідентифікатор сесії |
-| Transaction ID | PayPal transaction ID / ID транзакції PayPal |
-| Plan | Subscription plan / План підписки |
-| Email (User) | Email provided by user via Telegram bot / Email надано користувачем через Telegram бот |
-| Email (PayPal) | Email from PayPal payment / Email з PayPal платежу |
-| Final Email | Final email used for access (priority: user > paypal) / Фінальний email для доступу |
-| Amount | Payment amount / Сума оплати |
-| Currency | Payment currency / Валюта оплати |
-| Status | Payment status / Статус платежу |
-| Payment Date | Date of payment / Дата оплати |
-| End Date | Subscription end date (payment date + 60 days) / Дата закінчення підписки |
-| Created At | Session creation date / Дата створення сесії |
-| First Name | User's first name / Ім'я користувача |
-| Last Name | User's last name / Прізвище користувача |
+| Column         | Description / Опис                                                                     |
+| -------------- | -------------------------------------------------------------------------------------- |
+| Session ID     | Unique session identifier / Унікальний ідентифікатор сесії                             |
+| Transaction ID | PayPal transaction ID / ID транзакції PayPal                                           |
+| Plan           | Subscription plan / План підписки                                                      |
+| Email (User)   | Email provided by user via Telegram bot / Email надано користувачем через Telegram бот |
+| Email (PayPal) | Email from PayPal payment / Email з PayPal платежу                                     |
+| Final Email    | Final email used for access (priority: user > paypal) / Фінальний email для доступу    |
+| Amount         | Payment amount / Сума оплати                                                           |
+| Currency       | Payment currency / Валюта оплати                                                       |
+| Status         | Payment status / Статус платежу                                                        |
+| Payment Date   | Date of payment / Дата оплати                                                          |
+| End Date       | Subscription end date (payment date + 60 days) / Дата закінчення підписки              |
+| Created At     | Session creation date / Дата створення сесії                                           |
+| First Name     | User's first name / Ім'я користувача                                                   |
+| Last Name      | User's last name / Прізвище користувача                                                |
 
 ## Usage / Використання
 
@@ -92,13 +92,13 @@ Each report includes the following information:
 
 **Query Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| startDate | string | No | Start date in YYYY-MM-DD format |
-| endDate | string | No | End date in YYYY-MM-DD format |
-| status | enum | No | Filter by status (started, awaiting_payment, paid, completed, failed, refunded) |
-| plan | enum | No | Filter by plan (basic, standard, premium) |
-| format | enum | No | Export format (csv, excel) - defaults to csv |
+| Parameter | Type   | Required | Description                                                                     |
+| --------- | ------ | -------- | ------------------------------------------------------------------------------- |
+| startDate | string | No       | Start date in YYYY-MM-DD format                                                 |
+| endDate   | string | No       | End date in YYYY-MM-DD format                                                   |
+| status    | enum   | No       | Filter by status (started, awaiting_payment, paid, completed, failed, refunded) |
+| plan      | enum   | No       | Filter by plan (basic, standard, premium)                                       |
+| format    | enum   | No       | Export format (csv, excel) - defaults to csv                                    |
 
 **Example Request:**
 
@@ -118,20 +118,24 @@ curl -X GET "https://your-api.com/api/admin/export?startDate=2024-01-01&endDate=
 ### Frontend Components
 
 **New Files:**
+
 - `/frontend/src/pages/Reports.tsx` - Main reports page component
 
 **Modified Files:**
+
 - `/frontend/src/components/Layout.tsx` - Added "Звіти" menu item
 - `/frontend/src/App.tsx` - Added `/reports` route
 
 ### Backend
 
 **Modified Files:**
+
 - `/backend/src/validators/admin-validators.ts` - Added `exportSchema` validation
 - `/backend/src/routes/admin-routes.ts` - Added validation to export route
 - `/backend/src/controllers/admin-controller.ts` - Updated `exportData` method with proper typing
 
 **Existing Services Used:**
+
 - `/backend/src/services/export-service.ts` - Handles CSV generation and export logic
 
 ## Security / Безпека
@@ -184,6 +188,7 @@ Potential improvements for future versions:
 **Problem:** Report generation fails or download doesn't start
 
 **Solutions:**
+
 1. Check that JWT token is valid
 2. Verify date format (must be YYYY-MM-DD)
 3. Check browser console for errors
@@ -195,6 +200,7 @@ Potential improvements for future versions:
 **Problem:** Downloaded report contains no data
 
 **Solutions:**
+
 1. Verify that data exists for the selected period
 2. Check applied filters
 3. Try removing filters to see all data
@@ -205,6 +211,7 @@ Potential improvements for future versions:
 **Problem:** Report data doesn't match expected results
 
 **Solutions:**
+
 1. Verify selected date range
 2. Check filter settings
 3. Compare with data in "Платежі" (Payments) page
@@ -220,4 +227,3 @@ For issues or questions about the Reports feature, please:
 2. Review backend logs
 3. Check browser console for errors
 4. Contact system administrator
-
