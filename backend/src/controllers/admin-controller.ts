@@ -18,6 +18,7 @@ import {
   SendEmailInput,
   ListSessionsInput,
   ListActionsInput,
+  ExportInput,
 } from '../validators/admin-validators';
 import { Plan, SessionStatus, ActionType } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
@@ -349,22 +350,16 @@ export class AdminController {
    * GET /api/admin/export
    * Export data (CSV/Excel)
    */
-  exportData = asyncHandler(async (req: Request<unknown, unknown, unknown, {
-    status?: SessionStatus;
-    plan?: Plan;
-    startDate?: string;
-    endDate?: string;
-    format?: 'csv' | 'excel';
-  }>, res: Response) => {
+  exportData = asyncHandler<unknown, unknown, unknown, ExportInput>(async (req: Request<unknown, unknown, unknown, ExportInput>, res: Response) => {
     const query = req.query;
 
     await exportService.exportSessions(
       {
         status: query.status as SessionStatus | undefined,
         plan: query.plan as Plan | undefined,
-        startDate: query.startDate ? new Date(query.startDate as string) : undefined,
-        endDate: query.endDate ? new Date(query.endDate as string) : undefined,
-        format: (query.format as 'csv' | 'excel') || 'csv',
+        startDate: query.startDate ? new Date(query.startDate) : undefined,
+        endDate: query.endDate ? new Date(query.endDate) : undefined,
+        format: query.format || 'csv',
       },
       res
     );

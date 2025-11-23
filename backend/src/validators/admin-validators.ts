@@ -51,6 +51,14 @@ export const listActionsSchema = z.object({
   endDate: z.string().datetime().optional(),
 });
 
+export const exportSchema = z.object({
+  status: z.nativeEnum(SessionStatus).optional(),
+  plan: z.nativeEnum(Plan).optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
+  format: z.enum(['csv', 'excel']).default('csv'),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchema>;
 export type LoginWithResetCodeInput = z.infer<typeof loginWithResetCodeSchema>;
@@ -59,4 +67,5 @@ export type UpdateEmailInput = z.infer<typeof updateEmailSchema>;
 export type SendEmailInput = z.infer<typeof sendEmailSchema>;
 export type ListSessionsInput = z.infer<typeof listSessionsSchema>;
 export type ListActionsInput = z.infer<typeof listActionsSchema>;
+export type ExportInput = z.infer<typeof exportSchema>;
 

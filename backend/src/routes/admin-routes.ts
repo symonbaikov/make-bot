@@ -11,6 +11,7 @@ import {
   sendEmailSchema,
   listSessionsSchema,
   listActionsSchema,
+  exportSchema,
 } from '../validators/admin-validators';
 import { authLimiter } from '../middleware/rate-limiter';
 import { Role } from '@prisma/client';
@@ -93,7 +94,11 @@ router.post(
 );
 
 // GET /api/admin/export
-router.get('/export', adminController.exportData);
+router.get(
+  '/export',
+  validateQuery(exportSchema),
+  adminController.exportData as any
+);
 
 export default router;
 

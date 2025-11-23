@@ -9,6 +9,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Payments } from './pages/Payments';
 import { PaymentDetails } from './pages/PaymentDetails';
 import { Actions } from './pages/Actions';
+import { Reports } from './pages/Reports';
 import { CreateSession } from './pages/CreateSession';
 
 function App() {
@@ -64,6 +65,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <Actions />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Reports />
               </Layout>
             </ProtectedRoute>
           }
