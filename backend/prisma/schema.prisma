@@ -46,6 +46,15 @@ enum Role {
   MANAGER
 }
 
+enum PublicationStatus {
+  PENDING      // Создано, ждет отправки
+  PROCESSING   // Отправлено в Make
+  PUBLISHED    // Успешно опубликовано
+  PARTIAL      // Опубликовано частично
+  FAILED       // Ошибка
+  CANCELLED    // Отменено
+}
+
 model User {
   id          String   @id @default(uuid())
   email       String?  @unique
@@ -118,6 +127,7 @@ model WebUser {
 
   passwordResetCodes PasswordResetCode[]
   chatSessions       ChatSession[]
+  publications       Publication[]
 
   @@map("web_users")
 }
@@ -172,5 +182,46 @@ model ChatMessage {
   @@index([sessionId])
   @@index([createdAt])
   @@map("chat_messages")
+}
+
+model Publication {
+  id          String            @id @default(uuid())
+  userId      String            @map("user_id")
+
+  // Content
+  title       String
+  description String            @db.Text
+  videoPath   String            @map("video_path")
+  videoUrl    String?           @map("video_url")
+  thumbnailPath String?         @map("thumbnail_path")
+  thumbnailUrl String?          @map("thumbnail_url")
+
+  // Target platforms (stored as JSON array: ["instagram", "tiktok"])
+  platforms   Json
+
+  // Status tracking
+  status      PublicationStatus @default(PENDING)
+  makeWebhookSent Boolean       @default(false) @map("make_webhook_sent")
+  makeResponse Json?            @map("make_response")
+
+  // Platform-specific results (JSON: { "instagram": { "success": true, "postId": "..." }, ... })
+  publishResults Json?          @map("publish_results")
+
+  // Video metadata
+  fileSize    Int?              @map("file_size")
+  duration    Int?              // seconds
+  format      String?
+  resolution  String?
+
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  publishedAt DateTime?         @map("published_at")
+
+  user        WebUser           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("publications")
 }
 

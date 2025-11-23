@@ -342,9 +342,15 @@ function startServer() {
   const webhookRoutes = require('./routes/webhook-routes').default;
   const adminRoutes = require('./routes/admin-routes').default;
   const aiChatRoutes = require('./routes/ai-chat-routes').default;
+  const publicationRoutes = require('./routes/publication-routes').default;
   app.use('/api/webhook', webhookRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/admin/ai-chat', aiChatRoutes);
+  app.use('/api/admin/publications', publicationRoutes);
+
+  // Serve uploaded videos and thumbnails
+  const uploadsDir = process.env.UPLOADS_DIR || './uploads';
+  app.use('/uploads', express.static(path.join(__dirname, '..', uploadsDir)));
 
   // Serve static files from frontend build (in production)
   // In development, frontend is served by Vite dev server
