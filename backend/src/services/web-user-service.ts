@@ -52,7 +52,7 @@ async function initializePool(): Promise<void> {
         'DATABASE_URL is required in production mode. Please set the DATABASE_URL environment variable in Railway.'
       );
     }
-    
+
     const { detectDatabaseConnection } = await import('../utils/db-connection');
     const config = await detectDatabaseConnection();
 
@@ -466,6 +466,132 @@ export class WebUserService {
         lastName: user.lastName,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
+      },
+      token,
+    };
+  }
+
+  /**
+   * Change user password (with old password verification)
+   */
+  async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<void> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User');
+    }
+
+    // Verify old password
+    const isValidPassword = await bcrypt.compare(oldPassword, user.passwordHash);
+    if (!isValidPassword) {
+      throw new UnauthorizedError('Invalid old password');
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await prisma.webUser.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    // Send notification email
+    try {
+      await emailService.sendPasswordChangedNotification(user.email);
+    } catch (error) {
+      logger.error('Failed to send password change notification', {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Log action
+    const { actionService } = await import('./action-service');
+    await actionService.create({
+      type: 'OTHER' as any,
+      ref: userId,
+      payload: { action: 'password_changed', email: user.email },
+    });
+
+    logger.info('User password changed', { userId, email: user.email });
+  }
+
+  /**
+   * Change user email (without confirmation - Variant A)
+   */
+  async changeEmail(userId: string, newEmail: string, password: string): Promise<LoginResult> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User');
+    }
+
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+    if (!isValidPassword) {
+      throw new UnauthorizedError('Invalid password');
+    }
+
+    // Check if email is already taken
+    const existingUser = await this.findByEmail(newEmail);
+    if (existingUser && existingUser.id !== userId) {
+      throw new ValidationError('Email is already taken');
+    }
+
+    // Update email
+    const updatedUser = await prisma.webUser.update({
+      where: { id: userId },
+      data: { email: newEmail },
+    });
+
+    // Generate new JWT with updated email
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET is not configured');
+    }
+
+    const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+
+    const signOptions = {
+      expiresIn,
+    } as SignOptions;
+
+    const token = jwt.sign(
+      {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        role: updatedUser.role,
+      },
+      secret,
+      signOptions
+    );
+
+    // Log action
+    const { actionService } = await import('./action-service');
+    await actionService.create({
+      type: 'OTHER' as any,
+      ref: userId,
+      payload: {
+        action: 'email_changed',
+        oldEmail: user.email,
+        newEmail: newEmail,
+      },
+    });
+
+    logger.info('User email changed', {
+      userId,
+      oldEmail: user.email,
+      newEmail: newEmail,
+    });
+
+    return {
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt,
       },
       token,
     };

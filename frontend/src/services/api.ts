@@ -124,6 +124,52 @@ export const apiService = {
     }
   },
 
+  // Profile Management
+  async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+    try {
+      const response = await api.post<ApiResponse<{ message: string }>>(
+        '/api/admin/profile/change-password',
+        { oldPassword, newPassword }
+      );
+      if (!response.data.success) {
+        throw new Error(response.data.error?.message || 'Failed to change password');
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<ApiResponse>;
+        const errorMessage =
+          axiosError.response?.data?.error?.message ||
+          axiosError.message ||
+          'Failed to change password';
+        throw new Error(errorMessage);
+      }
+      throw error;
+    }
+  },
+
+  async changeEmail(newEmail: string, password: string): Promise<LoginResponse> {
+    try {
+      const response = await api.post<ApiResponse<LoginResponse>>(
+        '/api/admin/profile/change-email',
+        { newEmail, password }
+      );
+      if (!response.data.success || !response.data.data) {
+        throw new Error(response.data.error?.message || 'Failed to change email');
+      }
+      return response.data.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<ApiResponse>;
+        const errorMessage =
+          axiosError.response?.data?.error?.message ||
+          axiosError.message ||
+          'Failed to change email';
+        throw new Error(errorMessage);
+      }
+      throw error;
+    }
+  },
+
   // Sessions/Payments
   async getSessions(params: ListSessionsParams = {}): Promise<PaginatedResponse<Session>> {
     const response = await api.get<ApiResponse<PaginatedResponse<Session>>>('/api/admin/payments', {
@@ -223,7 +269,7 @@ export const apiService = {
     } else if (params.format === 'docx') {
       acceptHeader = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
     }
-    
+
     const response = await api.get<Blob>('/api/admin/export', {
       params,
       responseType: 'blob',

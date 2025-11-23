@@ -8,6 +8,7 @@ interface AuthContextType {
   login: (credentials: LoginCredentials) => Promise<void>;
   loginWithResetCode: (email: string, code: string) => Promise<void>;
   logout: () => void;
+  updateUser: (user: AuthUser, token?: string) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
@@ -76,6 +77,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearSentryUser();
   };
 
+  const updateUser = (user: AuthUser, token?: string) => {
+    setUser(user);
+    localStorage.setItem('auth_user', JSON.stringify(user));
+
+    if (token) {
+      localStorage.setItem('auth_token', token);
+    }
+
+    // Update user in Sentry
+    setSentryUser({
+      id: user.id,
+      email: user.email,
+      username: user.email,
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -83,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         loginWithResetCode,
         logout,
+        updateUser,
         isAuthenticated: !!user,
         isLoading,
       }}

@@ -12,6 +12,7 @@ import { Actions } from './pages/Actions';
 import { Reports } from './pages/Reports';
 import { AIChat } from './pages/AIChat';
 import { CreateSession } from './pages/CreateSession';
+import { Settings } from './pages/Settings';
 
 function App() {
   return (
@@ -100,10 +101,19 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Settings />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </AuthProvider>
   );
 }
 
 export default App;
-

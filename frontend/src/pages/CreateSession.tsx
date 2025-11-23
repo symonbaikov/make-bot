@@ -42,12 +42,9 @@ export function CreateSession() {
   return (
     <div className="relative min-h-[calc(100vh-4rem)]">
       <Starfall />
-      
+
       <div className="relative z-10 space-y-8">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold text-white">Тарифні плани</h1>
           <p className="mt-2 text-gray-400">
             Оберіть підходящий тарифний план та скопіюйте посилання для оплати
@@ -64,7 +61,9 @@ export function CreateSession() {
             >
               <GlassCard className="h-full flex flex-col overflow-hidden group hover:border-primary/50 transition-colors">
                 {/* Header with gradient */}
-                <div className={`bg-gradient-to-r ${plan.gradient} p-6 text-white relative overflow-hidden`}>
+                <div
+                  className={`bg-gradient-to-r ${plan.gradient} p-6 text-white relative overflow-hidden`}
+                >
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
                   <h2 className="text-2xl font-bold mb-2 relative z-10">{plan.title}</h2>
                   <p className="text-white/90 text-sm relative z-10">{plan.description}</p>
@@ -109,7 +108,10 @@ export function CreateSession() {
                       rel="noopener noreferrer"
                       className="block w-full"
                     >
-                      <Button3D variant="secondary" className="w-full bg-white/5 hover:bg-white/10 border border-white/10">
+                      <Button3D
+                        variant="secondary"
+                        className="w-full bg-white/5 hover:bg-white/10 border border-white/10"
+                      >
                         <span className="flex items-center justify-center text-gray-300">
                           <ExternalLink className="h-4 w-4 mr-2" />
                           Відкрити в новій вкладці

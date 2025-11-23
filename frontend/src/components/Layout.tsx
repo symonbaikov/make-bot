@@ -1,7 +1,17 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ReactNode } from 'react';
-import { LayoutDashboard, CreditCard, Activity, PlusCircle, LogOut, User, FileText, MessageSquare } from 'lucide-react';
+import {
+  LayoutDashboard,
+  CreditCard,
+  Activity,
+  PlusCircle,
+  LogOut,
+  User,
+  FileText,
+  MessageSquare,
+  Settings,
+} from 'lucide-react';
 import { PageTransition } from './ui/PageTransition';
 import { motion } from 'framer-motion';
 
@@ -26,6 +36,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Звіти', href: '/reports', icon: FileText },
     { name: 'Чат з ІІ', href: '/ai-chat', icon: MessageSquare },
     { name: 'Створити сесію', href: '/sessions/create', icon: PlusCircle },
+    { name: 'Налаштування', href: '/settings', icon: Settings },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -35,11 +46,14 @@ export function Layout({ children }: LayoutProps) {
       {/* Background Elements */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-float" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary/20 rounded-full blur-[120px] animate-float" style={{ animationDelay: '-3s' }} />
+        <div
+          className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary/20 rounded-full blur-[120px] animate-float"
+          style={{ animationDelay: '-3s' }}
+        />
       </div>
 
       {/* Sidebar */}
-      <motion.div 
+      <motion.div
         initial={{ x: -100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
@@ -55,7 +69,7 @@ export function Layout({ children }: LayoutProps) {
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
-            {navigation.map((item) => {
+            {navigation.map(item => {
               const Icon = item.icon;
               const active = isActive(item.href);
               return (
@@ -72,10 +86,12 @@ export function Layout({ children }: LayoutProps) {
                     <motion.div
                       layoutId="activeTab"
                       className="absolute inset-0 bg-primary/10 rounded-xl"
-                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                     />
                   )}
-                  <Icon className={`w-5 h-5 mr-3 transition-transform group-hover:scale-110 ${active ? 'text-primary' : ''}`} />
+                  <Icon
+                    className={`w-5 h-5 mr-3 transition-transform group-hover:scale-110 ${active ? 'text-primary' : ''}`}
+                  />
                   <span className="relative z-10">{item.name}</span>
                 </Link>
               );
@@ -107,12 +123,9 @@ export function Layout({ children }: LayoutProps) {
       {/* Main content */}
       <div className="pl-64 relative z-10">
         <main className="p-8 min-h-screen">
-          <PageTransition>
-            {children}
-          </PageTransition>
+          <PageTransition>{children}</PageTransition>
         </main>
       </div>
     </div>
   );
 }
-

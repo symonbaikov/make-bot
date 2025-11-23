@@ -12,7 +12,10 @@ export const requestPasswordResetSchema = z.object({
 
 export const loginWithResetCodeSchema = z.object({
   email: z.string().email('Invalid email format'),
-  code: z.string().length(6, 'Code must be 6 digits').regex(/^\d+$/, 'Code must contain only digits'),
+  code: z
+    .string()
+    .length(6, 'Code must be 6 digits')
+    .regex(/^\d+$/, 'Code must contain only digits'),
 });
 
 export const createSessionSchema = z.object({
@@ -54,9 +57,31 @@ export const listActionsSchema = z.object({
 export const exportSchema = z.object({
   status: z.nativeEnum(SessionStatus).optional(),
   plan: z.nativeEnum(Plan).optional(),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
+  startDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
+    .optional(),
+  endDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
+    .optional(),
   format: z.enum(['csv', 'excel', 'pdf', 'docx']).default('csv'),
+});
+
+// Profile management schemas
+export const changePasswordSchema = z.object({
+  oldPassword: z.string().min(1, 'Old password is required'),
+  newPassword: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
+});
+
+export const changeEmailSchema = z.object({
+  newEmail: z.string().email('Invalid email format'),
+  password: z.string().min(1, 'Password is required for verification'),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
@@ -68,4 +93,5 @@ export type SendEmailInput = z.infer<typeof sendEmailSchema>;
 export type ListSessionsInput = z.infer<typeof listSessionsSchema>;
 export type ListActionsInput = z.infer<typeof listActionsSchema>;
 export type ExportInput = z.infer<typeof exportSchema>;
-
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type ChangeEmailInput = z.infer<typeof changeEmailSchema>;

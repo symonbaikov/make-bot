@@ -12,6 +12,8 @@ import {
   listSessionsSchema,
   listActionsSchema,
   exportSchema,
+  changePasswordSchema,
+  changeEmailSchema,
 } from '../validators/admin-validators';
 import { authLimiter } from '../middleware/rate-limiter';
 import { Role } from '@prisma/client';
@@ -19,12 +21,7 @@ import { Role } from '@prisma/client';
 const router = Router();
 
 // POST /api/admin/auth/login
-router.post(
-  '/auth/login',
-  authLimiter,
-  validateBody(loginSchema),
-  adminController.login
-);
+router.post('/auth/login', authLimiter, validateBody(loginSchema), adminController.login);
 
 // POST /api/admin/auth/forgot-password
 router.post(
@@ -45,12 +42,19 @@ router.post(
 // All routes below require authentication
 router.use(authMiddleware);
 
-// GET /api/admin/payments
-router.get(
-  '/payments',
-  validateQuery(listSessionsSchema),
-  adminController.listPayments as any
+// Profile management routes
+// POST /api/admin/profile/change-password
+router.post(
+  '/profile/change-password',
+  validateBody(changePasswordSchema),
+  adminController.changePassword
 );
+
+// POST /api/admin/profile/change-email
+router.post('/profile/change-email', validateBody(changeEmailSchema), adminController.changeEmail);
+
+// GET /api/admin/payments
+router.get('/payments', validateQuery(listSessionsSchema), adminController.listPayments as any);
 
 // GET /api/admin/payments/:id
 router.get('/payments/:id', adminController.getPayment);
@@ -59,18 +63,10 @@ router.get('/payments/:id', adminController.getPayment);
 router.post('/payments/:id/resend', adminController.resendEmail);
 
 // PUT /api/admin/payments/:id/email
-router.put(
-  '/payments/:id/email',
-  validateBody(updateEmailSchema),
-  adminController.updateEmail
-);
+router.put('/payments/:id/email', validateBody(updateEmailSchema), adminController.updateEmail);
 
 // POST /api/admin/payments/:id/send-email
-router.post(
-  '/payments/:id/send-email',
-  validateBody(sendEmailSchema),
-  adminController.sendEmail
-);
+router.post('/payments/:id/send-email', validateBody(sendEmailSchema), adminController.sendEmail);
 
 // POST /api/admin/payments/:id/grant-access
 router.post('/payments/:id/grant-access', adminController.grantAccess);
@@ -79,11 +75,7 @@ router.post('/payments/:id/grant-access', adminController.grantAccess);
 router.get('/stats', adminController.getStats);
 
 // GET /api/admin/actions
-router.get(
-  '/actions',
-  validateQuery(listActionsSchema),
-  adminController.listActions as any
-);
+router.get('/actions', validateQuery(listActionsSchema), adminController.listActions as any);
 
 // POST /api/admin/sessions
 router.post(
@@ -94,11 +86,6 @@ router.post(
 );
 
 // GET /api/admin/export
-router.get(
-  '/export',
-  validateQuery(exportSchema),
-  adminController.exportData as any
-);
+router.get('/export', validateQuery(exportSchema), adminController.exportData as any);
 
 export default router;
-

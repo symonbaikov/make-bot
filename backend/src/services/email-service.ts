@@ -114,7 +114,7 @@ export class EmailService {
     // Convert plain text body to HTML, preserving line breaks
     const html = body
       .split('\n')
-      .map((line) => `<p>${line || '&nbsp;'}</p>`)
+      .map(line => `<p>${line || '&nbsp;'}</p>`)
       .join('');
 
     await this.sendEmail({
@@ -143,9 +143,10 @@ export class EmailService {
       return;
     }
 
-    const fullName = data.firstName || data.lastName
-      ? `${data.firstName || ''} ${data.lastName || ''}`.trim()
-      : 'Не вказано';
+    const fullName =
+      data.firstName || data.lastName
+        ? `${data.firstName || ''} ${data.lastName || ''}`.trim()
+        : 'Не вказано';
 
     const subject = 'Новий користувач зареєстрований';
     const html = `
@@ -181,12 +182,16 @@ export class EmailService {
                 <div class="label">Ім'я та прізвище:</div>
                 <div class="value">${fullName}</div>
               </div>
-              ${data.phoneNumber ? `
+              ${
+                data.phoneNumber
+                  ? `
               <div class="info-row">
                 <div class="label">Телефон:</div>
                 <div class="value">${data.phoneNumber}</div>
               </div>
-              ` : ''}
+              `
+                  : ''
+              }
               <div class="info-row">
                 <div class="label">План:</div>
                 <div class="value">${data.plan}</div>
@@ -212,7 +217,10 @@ export class EmailService {
         html,
         text,
       });
-      logger.info('Admin notification sent successfully', { sessionId: data.sessionId, adminEmail });
+      logger.info('Admin notification sent successfully', {
+        sessionId: data.sessionId,
+        adminEmail,
+      });
     } catch (error) {
       logger.error('Failed to send admin notification', {
         sessionId: data.sessionId,
@@ -222,12 +230,51 @@ export class EmailService {
       // Don't throw error - notification failure shouldn't break the main flow
     }
   }
+
+  /**
+   * Send notification that password was changed
+   */
+  async sendPasswordChangedNotification(email: string): Promise<void> {
+    const subject = 'Ваш пароль було змінено';
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #4F46E5; color: white; padding: 20px; border-radius: 5px 5px 0 0; }
+            .content { background: #f9fafb; padding: 20px; border-radius: 0 0 5px 5px; }
+            .warning { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0; border-radius: 5px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h2>Пароль змінено</h2>
+            </div>
+            <div class="content">
+              <p>Ваш пароль було успішно змінено.</p>
+              <p>Дата зміни: ${new Date().toLocaleString('uk-UA', { timeZone: 'Europe/Kiev' })}</p>
+              <div class="warning">
+                <strong>⚠️ Важливо!</strong><br>
+                Якщо ви не змінювали пароль, негайно зв'яжіться з адміністратором.
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+    const text = `Пароль змінено\n\nВаш пароль було успішно змінено.\nДата зміни: ${new Date().toLocaleString('uk-UA', { timeZone: 'Europe/Kiev' })}\n\nЯкщо ви не змінювали пароль, негайно зв'яжіться з адміністратором.`;
+
+    await this.sendEmail({
+      to: email,
+      subject,
+      html,
+      text,
+    });
+  }
 }
 
 export const emailService = new EmailService();
-
-
-
-
-
-

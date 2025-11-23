@@ -19,6 +19,8 @@ import {
   ListSessionsInput,
   ListActionsInput,
   ExportInput,
+  ChangePasswordInput,
+  ChangeEmailInput,
 } from '../validators/admin-validators';
 import { Plan, SessionStatus, ActionType } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
@@ -66,6 +68,36 @@ export class AdminController {
       const { email, code } = req.body;
 
       const result = await webUserService.loginWithResetCode(email, code);
+
+      sendSuccess(res, result, 200);
+    }
+  );
+
+  /**
+   * POST /api/admin/profile/change-password
+   * Change user password
+   */
+  changePassword = asyncHandler(
+    async (req: AuthRequest<unknown, unknown, ChangePasswordInput>, res: Response) => {
+      const { oldPassword, newPassword } = req.body;
+      const userId = req.user!.id;
+
+      await webUserService.changePassword(userId, oldPassword, newPassword);
+
+      sendSuccess(res, { message: 'Password changed successfully' }, 200);
+    }
+  );
+
+  /**
+   * POST /api/admin/profile/change-email
+   * Change user email (without confirmation)
+   */
+  changeEmail = asyncHandler(
+    async (req: AuthRequest<unknown, unknown, ChangeEmailInput>, res: Response) => {
+      const { newEmail, password } = req.body;
+      const userId = req.user!.id;
+
+      const result = await webUserService.changeEmail(userId, newEmail, password);
 
       sendSuccess(res, result, 200);
     }
