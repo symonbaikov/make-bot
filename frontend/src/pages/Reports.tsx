@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FileDown, Calendar, Filter, Download } from 'lucide-react';
-import { format } from 'date-fns';
+import { format as formatDate } from 'date-fns';
 import { uk } from 'date-fns/locale';
 
 type ReportFormat = 'csv' | 'excel';
@@ -17,8 +17,8 @@ export function Reports() {
   const [period, setPeriod] = useState<ReportPeriod>('current_month');
   const [format, setFormat] = useState<ReportFormat>('csv');
   const [customRange, setCustomRange] = useState<DateRange>({
-    start: format(new Date(), 'yyyy-MM-dd'),
-    end: format(new Date(), 'yyyy-MM-dd'),
+    start: formatDate(new Date(), 'yyyy-MM-dd'),
+    end: formatDate(new Date(), 'yyyy-MM-dd'),
   });
   const [status, setStatus] = useState<string>('all');
   const [plan, setPlan] = useState<string>('all');
@@ -32,28 +32,28 @@ export function Reports() {
     switch (period) {
       case 'current_month':
         return {
-          start: format(new Date(currentYear, currentMonth, 1), 'yyyy-MM-dd'),
-          end: format(new Date(currentYear, currentMonth + 1, 0), 'yyyy-MM-dd'),
+          start: formatDate(new Date(currentYear, currentMonth, 1), 'yyyy-MM-dd'),
+          end: formatDate(new Date(currentYear, currentMonth + 1, 0), 'yyyy-MM-dd'),
         };
       case 'last_month':
         return {
-          start: format(new Date(currentYear, currentMonth - 1, 1), 'yyyy-MM-dd'),
-          end: format(new Date(currentYear, currentMonth, 0), 'yyyy-MM-dd'),
+          start: formatDate(new Date(currentYear, currentMonth - 1, 1), 'yyyy-MM-dd'),
+          end: formatDate(new Date(currentYear, currentMonth, 0), 'yyyy-MM-dd'),
         };
       case 'last_3_months':
         return {
-          start: format(new Date(currentYear, currentMonth - 3, 1), 'yyyy-MM-dd'),
-          end: format(new Date(currentYear, currentMonth + 1, 0), 'yyyy-MM-dd'),
+          start: formatDate(new Date(currentYear, currentMonth - 3, 1), 'yyyy-MM-dd'),
+          end: formatDate(new Date(currentYear, currentMonth + 1, 0), 'yyyy-MM-dd'),
         };
       case 'last_6_months':
         return {
-          start: format(new Date(currentYear, currentMonth - 6, 1), 'yyyy-MM-dd'),
-          end: format(new Date(currentYear, currentMonth + 1, 0), 'yyyy-MM-dd'),
+          start: formatDate(new Date(currentYear, currentMonth - 6, 1), 'yyyy-MM-dd'),
+          end: formatDate(new Date(currentYear, currentMonth + 1, 0), 'yyyy-MM-dd'),
         };
       case 'current_year':
         return {
-          start: format(new Date(currentYear, 0, 1), 'yyyy-MM-dd'),
-          end: format(new Date(currentYear, 11, 31), 'yyyy-MM-dd'),
+          start: formatDate(new Date(currentYear, 0, 1), 'yyyy-MM-dd'),
+          end: formatDate(new Date(currentYear, 11, 31), 'yyyy-MM-dd'),
         };
       case 'custom':
         return customRange;
@@ -284,11 +284,11 @@ export function Reports() {
             <p className="text-sm text-gray-400">
               Період звіту:{' '}
               <span className="text-white font-medium">
-                {format(new Date(getDateRange().start), 'dd MMMM yyyy', { locale: uk })}
+                {formatDate(new Date(getDateRange().start), 'dd MMMM yyyy', { locale: uk })}
               </span>
               {' — '}
               <span className="text-white font-medium">
-                {format(new Date(getDateRange().end), 'dd MMMM yyyy', { locale: uk })}
+                {formatDate(new Date(getDateRange().end), 'dd MMMM yyyy', { locale: uk })}
               </span>
             </p>
           </div>
