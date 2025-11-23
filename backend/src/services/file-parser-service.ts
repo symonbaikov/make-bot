@@ -2,9 +2,6 @@ import { parse } from 'csv-parse/sync';
 import mammoth from 'mammoth';
 import { logger } from '../utils/logger';
 
-// Dynamic import for pdf-parse
-const pdfParse = require('pdf-parse');
-
 export interface ParsedData {
   records: any[];
   summary: {
@@ -58,7 +55,21 @@ export class FileParserService {
    */
   async parsePDF(buffer: Buffer): Promise<ParsedData> {
     try {
-      const data = await pdfParse(buffer);
+      // Lazy-load pdf-parse to avoid DOM globals issues in some environments
+      const pdfModule: any = await import('pdf-parse').catch((err: any) => {
+        logger.warn('pdf-parse failed to load, falling back', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return null;
+      });
+
+      if (!pdfModule) {
+        throw new Error('pdf-parse module not available');
+      }
+
+      // pdf-parse may export default or the function itself
+      const pdfParseFn = (pdfModule.default || pdfModule) as (b: Buffer) => Promise<any>;
+      const data = await pdfParseFn(buffer);
       const text = data.text;
 
       // Try to find sessions count
