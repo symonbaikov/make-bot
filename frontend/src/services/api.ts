@@ -11,6 +11,14 @@ import {
   Stats,
   CreateSessionInput,
 } from '../types';
+import {
+  Publication,
+  CreatePublicationInput,
+  UpdatePublicationInput,
+  PublicationListParams,
+  PublicationListResponse,
+  UploadResult,
+} from '../types/publication';
 
 // Use relative path in development (via Vite proxy) or absolute URL in production
 // In dev mode, ALWAYS use empty string to use Vite proxy (ignore VITE_API_URL in dev)
@@ -279,6 +287,107 @@ export const apiService = {
     });
 
     return response.data;
+  },
+
+  // Publications
+  async uploadVideo(
+    file: File,
+    onProgress?: (progress: number) => void
+  ): Promise<UploadResult> {
+    const formData = new FormData();
+    formData.append('video', file);
+
+    const response = await api.post<ApiResponse<UploadResult>>(
+      '/api/admin/publications/upload',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: progressEvent => {
+          if (progressEvent.total && onProgress) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(progress);
+          }
+        },
+      }
+    );
+
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error?.message || 'Failed to upload video');
+    }
+
+    return response.data.data;
+  },
+
+  async createPublication(data: CreatePublicationInput): Promise<Publication> {
+    const response = await api.post<ApiResponse<Publication>>('/api/admin/publications', data);
+
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error?.message || 'Failed to create publication');
+    }
+
+    return response.data.data;
+  },
+
+  async getPublications(params?: PublicationListParams): Promise<PublicationListResponse> {
+    const response = await api.get<ApiResponse<PublicationListResponse>>(
+      '/api/admin/publications',
+      { params }
+    );
+
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error?.message || 'Failed to fetch publications');
+    }
+
+    return response.data.data;
+  },
+
+  async getPublicationById(id: string): Promise<Publication> {
+    const response = await api.get<ApiResponse<Publication>>(`/api/admin/publications/${id}`);
+
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error?.message || 'Failed to fetch publication');
+    }
+
+    return response.data.data;
+  },
+
+  async updatePublication(id: string, data: UpdatePublicationInput): Promise<Publication> {
+    const response = await api.put<ApiResponse<Publication>>(
+      `/api/admin/publications/${id}`,
+      data
+    );
+
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error?.message || 'Failed to update publication');
+    }
+
+    return response.data.data;
+  },
+
+  async deletePublication(id: string): Promise<void> {
+    const response = await api.delete<ApiResponse>(`/api/admin/publications/${id}`);
+
+    if (!response.data.success) {
+      throw new Error(response.data.error?.message || 'Failed to delete publication');
+    }
+  },
+
+  async publishToMake(id: string): Promise<void> {
+    const response = await api.post<ApiResponse>(`/api/admin/publications/${id}/publish`);
+
+    if (!response.data.success) {
+      throw new Error(response.data.error?.message || 'Failed to publish to Make');
+    }
+  },
+
+  async retryPublication(id: string): Promise<void> {
+    const response = await api.post<ApiResponse>(`/api/admin/publications/${id}/retry`);
+
+    if (!response.data.success) {
+      throw new Error(response.data.error?.message || 'Failed to retry publication');
+    }
   },
 };
 

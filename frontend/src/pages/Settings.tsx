@@ -65,14 +65,6 @@ function TabButton({ active, onClick, icon: Icon, children }: TabButtonProps) {
 function ProfileSection() {
   const { user } = useAuth();
 
-  const formatDate = (date: Date | string) => {
-    return new Date(date).toLocaleDateString('uk-UA', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -111,9 +103,7 @@ function ProfileSection() {
             <Calendar className="w-5 h-5 text-primary mr-3" />
             <div>
               <p className="text-xs text-gray-400">Дата реєстрації</p>
-              <p className="text-white">
-                {user?.createdAt ? formatDate(user.createdAt) : 'Невідомо'}
-              </p>
+              <p className="text-white">Невідомо</p>
             </div>
           </div>
         </div>

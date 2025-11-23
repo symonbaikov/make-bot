@@ -11,6 +11,7 @@ import {
   FileText,
   MessageSquare,
   Settings,
+  Video,
 } from 'lucide-react';
 import { PageTransition } from './ui/PageTransition';
 import { motion } from 'framer-motion';
@@ -34,6 +35,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Платежі', href: '/payments', icon: CreditCard },
     { name: 'Журнал активності', href: '/actions', icon: Activity },
     { name: 'Звіти', href: '/reports', icon: FileText },
+    { name: 'Публікації', href: '/publications', icon: Video },
     { name: 'Чат з ІІ', href: '/ai-chat', icon: MessageSquare },
     { name: 'Створити сесію', href: '/sessions/create', icon: PlusCircle },
     { name: 'Налаштування', href: '/settings', icon: Settings },

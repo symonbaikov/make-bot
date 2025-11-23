@@ -37,11 +37,7 @@ const fileFilter = (
   if (allowedMimes.includes(file.mimetype) && allowedExts.includes(ext)) {
     cb(null, true);
   } else {
-    cb(
-      new Error(
-        `Invalid file type. Only ${allowedExts.join(', ')} formats are allowed.`
-      )
-    );
+    cb(new Error(`Invalid file type. Only ${allowedExts.join(', ')} formats are allowed.`));
   }
 };
 
@@ -53,4 +49,3 @@ export const upload = multer({
     fileSize: MAX_VIDEO_SIZE_MB * 1024 * 1024, // Convert MB to bytes
   },
 });
-

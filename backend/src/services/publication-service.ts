@@ -228,7 +228,7 @@ export class PublicationService {
     try {
       // Determine overall status based on results
       const platforms = Object.keys(results);
-      const successCount = platforms.filter((p) => results[p].success).length;
+      const successCount = platforms.filter(p => results[p].success).length;
 
       let status: PublicationStatus;
       if (successCount === platforms.length) {
@@ -298,4 +298,3 @@ export class PublicationService {
 }
 
 export const publicationService = new PublicationService();
-

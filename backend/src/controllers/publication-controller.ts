@@ -90,33 +90,31 @@ class PublicationController {
    * Get publications list
    * GET /api/admin/publications
    */
-  getPublications = asyncHandler(
-    async (req: Request, res: Response) => {
-      const authReq = req as AuthRequest;
-      const userId = authReq.user?.id;
+  getPublications = asyncHandler(async (req: Request, res: Response) => {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
 
-      const query = req.query as any;
-      const filters = {
-        ...query,
-        userId, // Filter by current user
-        startDate: query.startDate ? new Date(query.startDate) : undefined,
-        endDate: query.endDate ? new Date(query.endDate) : undefined,
-      };
+    const query = req.query as any;
+    const filters = {
+      ...query,
+      userId, // Filter by current user
+      startDate: query.startDate ? new Date(query.startDate) : undefined,
+      endDate: query.endDate ? new Date(query.endDate) : undefined,
+    };
 
-      try {
-        const result = await publicationService.getPublications(filters);
-        sendSuccess(res, result);
-      } catch (error) {
-        logger.error('Error fetching publications:', error);
-        sendError(
-          res,
-          error instanceof Error ? error.message : 'Failed to fetch publications',
-          'FETCH_FAILED',
-          500
-        );
-      }
+    try {
+      const result = await publicationService.getPublications(filters);
+      sendSuccess(res, result);
+    } catch (error) {
+      logger.error('Error fetching publications:', error);
+      sendError(
+        res,
+        error instanceof Error ? error.message : 'Failed to fetch publications',
+        'FETCH_FAILED',
+        500
+      );
     }
-  );
+  });
 
   /**
    * Get publication by ID
@@ -184,7 +182,10 @@ class PublicationController {
       }
 
       // Delete files
-      await videoUploadService.deleteVideo(publication.videoPath, publication.thumbnailPath || undefined);
+      await videoUploadService.deleteVideo(
+        publication.videoPath,
+        publication.thumbnailPath || undefined
+      );
 
       // Delete from database
       await publicationService.deletePublication(id);
@@ -245,4 +246,3 @@ class PublicationController {
 }
 
 export const publicationController = new PublicationController();
-

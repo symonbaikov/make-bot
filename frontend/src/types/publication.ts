@@ -1,5 +1,5 @@
 /**
- * Publication Types
+ * Publication Types (Frontend)
  * Types for social media cross-posting functionality
  */
 
@@ -16,9 +16,9 @@ export type Platform = 'instagram' | 'tiktok' | 'facebook' | 'youtube';
 export interface VideoMetadata {
   duration: number; // seconds
   fileSize: number; // bytes
-  format: string; // mp4, mov, etc
-  resolution?: string; // 1920x1080
-  bitrate?: number; // bits per second
+  format: string;
+  resolution?: string;
+  bitrate?: number;
 }
 
 export interface PlatformResult {
@@ -29,14 +29,41 @@ export interface PlatformResult {
   publishedAt?: string;
 }
 
-export interface CreatePublicationInput {
+export interface Publication {
+  id: string;
   userId: string;
+  title: string;
+  description: string;
+  videoPath: string;
+  videoUrl?: string;
+  thumbnailPath?: string;
+  thumbnailUrl?: string;
+  platforms: Platform[];
+  status: PublicationStatus;
+  makeWebhookSent: boolean;
+  makeResponse?: any;
+  publishResults?: Record<Platform, PlatformResult>;
+  fileSize?: number;
+  duration?: number;
+  format?: string;
+  resolution?: string;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string;
+  user?: {
+    id: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+  };
+}
+
+export interface CreatePublicationInput {
   title: string;
   description: string;
   videoPath: string;
   thumbnailPath?: string;
   platforms: Platform[];
-  metadata?: VideoMetadata;
 }
 
 export interface UpdatePublicationInput {
@@ -45,14 +72,13 @@ export interface UpdatePublicationInput {
   platforms?: Platform[];
 }
 
-export interface PublicationFilters {
+export interface PublicationListParams {
   status?: PublicationStatus;
   platform?: Platform;
-  userId?: string;
-  startDate?: Date;
-  endDate?: Date;
   page?: number;
   limit?: number;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface UploadResult {
@@ -61,13 +87,10 @@ export interface UploadResult {
   metadata: VideoMetadata;
 }
 
-export interface MakePublicationPayload {
-  publicationId: string;
-  title: string;
-  description: string;
-  videoUrl: string;
-  thumbnailUrl?: string;
-  platforms: Platform[];
-  metadata: VideoMetadata;
-  createdAt: string;
+export interface PublicationListResponse {
+  publications: Publication[];
+  total: number;
+  page: number;
+  limit: number;
 }
+

@@ -16,10 +16,7 @@ ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 // Configuration
 const MAX_VIDEO_SIZE_MB = parseInt(process.env.MAX_VIDEO_SIZE_MB || '500', 10);
-const MAX_VIDEO_DURATION_SECONDS = parseInt(
-  process.env.MAX_VIDEO_DURATION_SECONDS || '600',
-  10
-);
+const MAX_VIDEO_DURATION_SECONDS = parseInt(process.env.MAX_VIDEO_DURATION_SECONDS || '600', 10);
 const ALLOWED_FORMATS = (process.env.ALLOWED_VIDEO_FORMATS || 'mp4,mov,avi,mkv').split(',');
 const UPLOADS_DIR = process.env.UPLOADS_DIR || './uploads';
 const VIDEO_URL_BASE = process.env.VIDEO_URL_BASE || 'http://localhost:3000/uploads/videos';
@@ -63,7 +60,7 @@ export class VideoUploadService {
           return reject(new Error('Failed to extract video metadata'));
         }
 
-        const videoStream = metadata.streams.find((s) => s.codec_type === 'video');
+        const videoStream = metadata.streams.find(s => s.codec_type === 'video');
         if (!videoStream) {
           return reject(new Error('No video stream found in file'));
         }
@@ -71,13 +68,14 @@ export class VideoUploadService {
         const duration = metadata.format.duration || 0;
         const fileSize = metadata.format.size || 0;
         const format = metadata.format.format_name || 'unknown';
-        const resolution = videoStream.width && videoStream.height
-          ? `${videoStream.width}x${videoStream.height}`
-          : undefined;
-        const bitrate = metadata.format.bit_rate 
-          ? (typeof metadata.format.bit_rate === 'string' 
-              ? parseInt(metadata.format.bit_rate, 10) 
-              : metadata.format.bit_rate)
+        const resolution =
+          videoStream.width && videoStream.height
+            ? `${videoStream.width}x${videoStream.height}`
+            : undefined;
+        const bitrate = metadata.format.bit_rate
+          ? typeof metadata.format.bit_rate === 'string'
+            ? parseInt(metadata.format.bit_rate, 10)
+            : metadata.format.bit_rate
           : undefined;
 
         // Check duration limit
@@ -121,7 +119,7 @@ export class VideoUploadService {
           logger.info('Thumbnail generated successfully', { thumbnailPath });
           resolve(thumbnailPath);
         })
-        .on('error', (err) => {
+        .on('error', err => {
           logger.error('Error generating thumbnail:', err);
           reject(new Error('Failed to generate thumbnail'));
         });
@@ -227,4 +225,3 @@ export class VideoUploadService {
 }
 
 export const videoUploadService = new VideoUploadService();
-

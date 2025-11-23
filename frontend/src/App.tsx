@@ -10,6 +10,7 @@ import { Payments } from './pages/Payments';
 import { PaymentDetails } from './pages/PaymentDetails';
 import { Actions } from './pages/Actions';
 import { Reports } from './pages/Reports';
+import Publications from './pages/Publications';
 import { AIChat } from './pages/AIChat';
 import { CreateSession } from './pages/CreateSession';
 import { Settings } from './pages/Settings';
@@ -77,6 +78,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <Reports />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/publications"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Publications />
               </Layout>
             </ProtectedRoute>
           }

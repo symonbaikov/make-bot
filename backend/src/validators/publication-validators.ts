@@ -38,14 +38,13 @@ export const listPublicationsSchema = z.object({
   page: z
     .string()
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 1)),
+    .transform(val => (val ? parseInt(val, 10) : 1)),
   limit: z
     .string()
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 20)),
+    .transform(val => (val ? parseInt(val, 10) : 20)),
 });
 
 // Export inferred types
 export type CreatePublicationInput = z.infer<typeof createPublicationSchema>;
 export type UpdatePublicationInput = z.infer<typeof updatePublicationSchema>;
-

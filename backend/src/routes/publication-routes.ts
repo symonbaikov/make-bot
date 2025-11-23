@@ -25,15 +25,15 @@ router.post('/upload', upload.single('video'), publicationController.uploadVideo
 // CRUD operations
 router.post('/', validateBody(createPublicationSchema), publicationController.createPublication);
 
-router.get('/', validateQuery(listPublicationsSchema as any), publicationController.getPublications);
+router.get(
+  '/',
+  validateQuery(listPublicationsSchema as any),
+  publicationController.getPublications
+);
 
 router.get('/:id', publicationController.getPublicationById);
 
-router.put(
-  '/:id',
-  validateBody(updatePublicationSchema),
-  publicationController.updatePublication
-);
+router.put('/:id', validateBody(updatePublicationSchema), publicationController.updatePublication);
 
 router.delete('/:id', publicationController.deletePublication);
 
@@ -44,4 +44,3 @@ router.post('/:id/publish', publicationController.publishToMake);
 router.post('/:id/retry', publicationController.retryPublication);
 
 export default router;
-

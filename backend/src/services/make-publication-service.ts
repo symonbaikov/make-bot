@@ -79,10 +79,7 @@ export class MakePublicationService {
   /**
    * Send webhook request with retry logic
    */
-  private async sendWithRetry(
-    payload: MakePublicationPayload,
-    attempt: number = 1
-  ): Promise<any> {
+  private async sendWithRetry(payload: MakePublicationPayload, attempt: number = 1): Promise<any> {
     try {
       const response = await axios.post(MAKE_WEBHOOK_URL, payload, {
         headers: {
@@ -126,7 +123,7 @@ export class MakePublicationService {
    * Delay helper
    */
   private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
@@ -154,4 +151,3 @@ export class MakePublicationService {
 }
 
 export const makePublicationService = new MakePublicationService();
-
