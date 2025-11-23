@@ -81,8 +81,18 @@ export class FileParserService {
         rawText: text,
       };
     } catch (error) {
-      logger.error('Error parsing PDF:', error);
-      throw new Error('Failed to parse PDF file');
+      // If PDF parsing fails, fall back to minimal summary instead of breaking the flow
+      logger.warn('PDF parsing failed, returning fallback summary', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return {
+        records: [],
+        summary: {
+          totalRecords: 0,
+          metrics: {},
+        },
+        rawText: '',
+      };
     }
   }
 
@@ -113,8 +123,17 @@ export class FileParserService {
         rawText: text,
       };
     } catch (error) {
-      logger.error('Error parsing DOCX:', error);
-      throw new Error('Failed to parse DOCX file');
+      logger.warn('DOCX parsing failed, returning fallback summary', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return {
+        records: [],
+        summary: {
+          totalRecords: 0,
+          metrics: {},
+        },
+        rawText: '',
+      };
     }
   }
 

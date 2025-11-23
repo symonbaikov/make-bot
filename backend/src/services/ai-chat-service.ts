@@ -23,6 +23,8 @@ export class AIChatService {
 
   constructor() {
     const apiKey = process.env.GEMINI_API_KEY;
+    const primaryModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const fallbackModel = 'gemini-1.5-flash';
     if (!apiKey) {
       logger.warn('GEMINI_API_KEY not found. AI chat will not be available.');
       return;
@@ -30,8 +32,17 @@ export class AIChatService {
 
     try {
       this.genAI = new GoogleGenerativeAI(apiKey);
-      this.model = this.genAI.getGenerativeModel({ model: 'gemini-pro' });
-      logger.info('AI Chat Service initialized successfully');
+      try {
+        this.model = this.genAI.getGenerativeModel({ model: primaryModel });
+        logger.info('AI Chat Service initialized successfully', { model: primaryModel });
+      } catch (primaryError) {
+        logger.warn('Primary Gemini model failed, falling back', {
+          modelTried: primaryModel,
+          error: primaryError instanceof Error ? primaryError.message : String(primaryError),
+        });
+        this.model = this.genAI.getGenerativeModel({ model: fallbackModel });
+        logger.info('AI Chat Service initialized with fallback model', { model: fallbackModel });
+      }
     } catch (error) {
       logger.error('Failed to initialize AI Chat Service:', error);
     }
@@ -77,10 +88,6 @@ export class AIChatService {
    * Send message and get AI response
    */
   async sendMessage(sessionId: string, userMessage: string): Promise<ChatMessage> {
-    if (!this.model) {
-      throw new Error('AI service is not available. Please configure GEMINI_API_KEY.');
-    }
-
     try {
       // Get session data
       // @ts-ignore - Prisma types will be correct at runtime
@@ -117,8 +124,19 @@ export class AIChatService {
         .map((m: { role: string; content: string }) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
         .join('\n');
 
-      // Generate AI response
-      const aiResponse = await this.queryGemini(userMessage, context, history);
+      // Generate AI response (fallback to heuristic if Gemini is not configured or fails)
+      let aiResponse: string;
+
+      if (!this.model) {
+        aiResponse = this.buildFallbackResponse(userMessage, session);
+      } else {
+        try {
+          aiResponse = await this.queryGemini(userMessage, context, history);
+        } catch (error) {
+          logger.error('Gemini query failed, using fallback response', error);
+          aiResponse = this.buildFallbackResponse(userMessage, session);
+        }
+      }
 
       // Save AI response
       // @ts-ignore - Prisma types will be correct at runtime
@@ -354,6 +372,48 @@ export class AIChatService {
     questions.push('Are there any anomalies in the data?');
 
     return questions.slice(0, 6); // Return top 6
+  }
+
+  /**
+   * Build a simple fallback response when Gemini is not available
+   */
+  private buildFallbackResponse(userMessage: string, session: any): string {
+    const summary = (session.extractedData as any)?.summary || {};
+    const metrics = summary.metrics || {};
+    const parts: string[] = [];
+
+    parts.push('⚠️ AI модель недоступна, тому надаю короткий підсумок по даних.');
+
+    if (summary.totalRecords !== undefined) {
+      parts.push(`• Записів у файлі: **${summary.totalRecords}**`);
+    }
+    if (metrics.totalSessions !== undefined) {
+      parts.push(`• К-сть сесій: **${metrics.totalSessions}**`);
+    }
+    if (metrics.totalRevenue !== undefined) {
+      parts.push(`• Дохід: **$${Number(metrics.totalRevenue).toFixed(2)}**`);
+    }
+    if (metrics.avgAmount !== undefined) {
+      parts.push(`• Середній чек: **$${Number(metrics.avgAmount).toFixed(2)}**`);
+    }
+    if (metrics.plans) {
+      const plansText = Object.entries(metrics.plans)
+        .map(([plan, count]) => `${plan}: ${count}`)
+        .join(', ');
+      if (plansText) {
+        parts.push(`• Розподіл по планах: ${plansText}`);
+      }
+    }
+
+    if (parts.length === 1) {
+      parts.push('Додайте більше даних або спробуйте інший файл.');
+    }
+
+    parts.push('');
+    parts.push(`Ваше питання: "${userMessage}"`);
+    parts.push('Якщо потрібен повний аналіз, додайте GEMINI_API_KEY і повторіть.');
+
+    return parts.join('\n');
   }
 }
 
