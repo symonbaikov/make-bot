@@ -1,12 +1,17 @@
 import rateLimit from 'express-rate-limit';
 
 // General API rate limiter
+// In development, use higher limits to avoid issues during testing
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 100 in prod, 1000 in dev
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: req => {
+    // Skip rate limiting for health checks
+    return req.path === '/health';
+  },
 });
 
 // Strict rate limiter for webhook endpoints
