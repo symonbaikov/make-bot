@@ -181,9 +181,7 @@ export default function PublicationDetailsModal({
               {/* Platform Results */}
               {publication.publishResults && (
                 <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">
-                    Результаты публикации:
-                  </h4>
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Результаты публикации:</h4>
                   <div className="space-y-2">
                     {Object.entries(publication.publishResults).map(([platform, result]) => (
                       <div
@@ -249,4 +247,3 @@ export default function PublicationDetailsModal({
     </AnimatePresence>
   );
 }
-

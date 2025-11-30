@@ -5,6 +5,7 @@ import CreatePublicationModal from '../components/publications/CreatePublication
 import PublicationsList from '../components/publications/PublicationsList';
 import PublicationFilters from '../components/publications/PublicationFilters';
 import { PublicationListParams } from '../types/publication';
+import { Button3D } from '../components/ui/Button3D';
 
 export default function Publications() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -40,20 +41,18 @@ export default function Publications() {
         className="flex justify-between items-center"
       >
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Публикации</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-3xl font-bold text-white">Публикации</h1>
+          <p className="mt-1 text-sm text-gray-400">
             Управление кросс-постингом в социальных сетях
           </p>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+        <Button3D
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="flex items-center"
         >
           <Plus className="w-5 h-5 mr-2" />
           Создать публикацию
-        </motion.button>
+        </Button3D>
       </motion.div>
 
       {/* Filters */}
@@ -66,11 +65,7 @@ export default function Publications() {
       </motion.div>
 
       {/* Publications List */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-      >
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
         <PublicationsList
           key={refreshKey}
           filters={filters}
@@ -90,4 +85,3 @@ export default function Publications() {
     </div>
   );
 }
-

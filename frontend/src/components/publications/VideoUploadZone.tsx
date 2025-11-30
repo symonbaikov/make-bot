@@ -192,7 +192,9 @@ export default function VideoUploadZone({ onUploadSuccess }: VideoUploadZoneProp
               </div>
               <div>
                 <p className="text-lg font-medium text-gray-900">
-                  {isDragActive ? 'Отпустите файл здесь' : 'Перетащите видео или нажмите для выбора'}
+                  {isDragActive
+                    ? 'Отпустите файл здесь'
+                    : 'Перетащите видео или нажмите для выбора'}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
                   MP4, MOV, AVI, MKV (макс 500MB, до 10 минут)
@@ -205,4 +207,3 @@ export default function VideoUploadZone({ onUploadSuccess }: VideoUploadZoneProp
     </div>
   );
 }
-

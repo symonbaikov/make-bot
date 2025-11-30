@@ -132,4 +132,3 @@ export default function PlatformSelector({ selected, onChange, error }: Platform
     </div>
   );
 }
-

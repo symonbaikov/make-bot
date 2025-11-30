@@ -93,4 +93,3 @@ export interface PublicationListResponse {
   page: number;
   limit: number;
 }
-

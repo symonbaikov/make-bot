@@ -77,7 +77,7 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
         `👤 Ім'я: ${ctx.session.firstName || ''} ${ctx.session.lastName || ''}\n` +
         `📱 Телефон: ${ctx.session.phoneNumber}\n\n` +
         `Ви можете повернутися на сторінку для завершення оплати.\n\n` +
-        `Ми зв'яжемося з вами найближчим часом.`
+        `Я надішлю доступ до вашого тарифу на курс одразу після оплати.`
       );
 
       // Clear session after successful processing

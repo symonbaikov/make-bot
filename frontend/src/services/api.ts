@@ -290,10 +290,7 @@ export const apiService = {
   },
 
   // Publications
-  async uploadVideo(
-    file: File,
-    onProgress?: (progress: number) => void
-  ): Promise<UploadResult> {
+  async uploadVideo(file: File, onProgress?: (progress: number) => void): Promise<UploadResult> {
     const formData = new FormData();
     formData.append('video', file);
 
@@ -354,10 +351,7 @@ export const apiService = {
   },
 
   async updatePublication(id: string, data: UpdatePublicationInput): Promise<Publication> {
-    const response = await api.put<ApiResponse<Publication>>(
-      `/api/admin/publications/${id}`,
-      data
-    );
+    const response = await api.put<ApiResponse<Publication>>(`/api/admin/publications/${id}`, data);
 
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error?.message || 'Failed to update publication');

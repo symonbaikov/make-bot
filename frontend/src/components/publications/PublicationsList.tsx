@@ -7,6 +7,9 @@ import { apiService } from '../../services/api';
 import { Publication, PublicationListParams } from '../../types/publication';
 import StatusBadge from './StatusBadge';
 import PublicationDetailsModal from './PublicationDetailsModal';
+import { GlassCard } from '../ui/GlassCard';
+import { Button3D } from '../ui/Button3D';
+import { Loading } from '../Loading';
 
 interface PublicationsListProps {
   filters: PublicationListParams;
@@ -98,22 +101,16 @@ export default function PublicationsList({
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent" />
-      </div>
-    );
+    return <Loading />;
   }
 
   if (publications.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-12 text-center">
-        <Video className="w-16 h-16 mx-auto text-gray-400" />
-        <h3 className="mt-4 text-lg font-medium text-gray-900">Нет публикаций</h3>
-        <p className="mt-2 text-gray-500">
-          Создайте свою первую публикацию для кросс-постинга
-        </p>
-      </div>
+      <GlassCard className="p-12 text-center">
+        <Video className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+        <h3 className="text-xl font-medium text-white">Нет публикаций</h3>
+        <p className="mt-2 text-gray-400">Создайте свою первую публикацию для кросс-постинга</p>
+      </GlassCard>
     );
   }
 
@@ -122,178 +119,162 @@ export default function PublicationsList({
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Publications Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {publications.map((publication, index) => (
           <motion.div
             key={publication.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
-            className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden"
           >
-            {/* Thumbnail */}
-            <div className="relative aspect-video bg-gray-200">
-              {publication.thumbnailUrl ? (
-                <img
-                  src={publication.thumbnailUrl}
-                  alt={publication.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <Video className="w-12 h-12 text-gray-400" />
-                </div>
-              )}
-              <div className="absolute top-2 right-2">
-                <StatusBadge status={publication.status} size="sm" />
-              </div>
-              {publication.duration && (
-                <div className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
-                  {formatDuration(publication.duration)}
-                </div>
-              )}
-            </div>
-
-            {/* Content */}
-            <div className="p-4">
-              <h3 className="font-medium text-gray-900 truncate">{publication.title}</h3>
-              <p className="mt-1 text-sm text-gray-500 line-clamp-2">{publication.description}</p>
-
-              {/* Platforms */}
-              <div className="mt-3 flex flex-wrap gap-1">
-                {publication.platforms.map((platform) => (
-                  <span
-                    key={platform}
-                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                  >
-                    <span className="mr-1">{getPlatformIcon(platform)}</span>
-                    {platform}
-                  </span>
-                ))}
-              </div>
-
-              {/* Metadata */}
-              <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-                <span>{formatFileSize(publication.fileSize)}</span>
-                <span>{format(new Date(publication.createdAt), 'dd MMM yyyy', { locale: ru })}</span>
-              </div>
-
-              {/* Actions */}
-              <div className="mt-4 flex items-center space-x-2">
-                <button
-                  onClick={() => setSelectedPublication(publication)}
-                  className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  <Eye className="w-4 h-4 mr-1.5" />
-                  Просмотр
-                </button>
-
-                {publication.status === 'FAILED' && (
-                  <button
-                    onClick={() => handleRetry(publication.id)}
-                    disabled={retryingId === publication.id}
-                    className="inline-flex items-center justify-center p-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                    title="Повторить"
-                  >
-                    <RefreshCw
-                      className={`w-4 h-4 ${retryingId === publication.id ? 'animate-spin' : ''}`}
-                    />
-                  </button>
+            <GlassCard className="h-full flex flex-col overflow-hidden group hover:border-primary/50 transition-colors p-0">
+              {/* Thumbnail */}
+              <div className="relative aspect-video bg-black/50">
+                {publication.thumbnailUrl ? (
+                  <img
+                    src={publication.thumbnailUrl}
+                    alt={publication.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <Video className="w-12 h-12 text-gray-600" />
+                  </div>
                 )}
-
-                <button
-                  onClick={() => handleDelete(publication.id)}
-                  disabled={deletingId === publication.id}
-                  className="inline-flex items-center justify-center p-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
-                  title="Удалить"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="absolute top-2 right-2">
+                  <StatusBadge status={publication.status} size="sm" />
+                </div>
+                {publication.duration && (
+                  <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
+                    {formatDuration(publication.duration)}
+                  </div>
+                )}
               </div>
-            </div>
+
+              {/* Content */}
+              <div className="p-4 flex-1 flex flex-col">
+                <h3 className="font-medium text-white truncate text-lg">{publication.title}</h3>
+                <p className="mt-1 text-sm text-gray-400 line-clamp-2">{publication.description}</p>
+
+                {/* Platforms */}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {publication.platforms.map(platform => (
+                    <span
+                      key={platform}
+                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white/10 text-white border border-white/10"
+                    >
+                      <span className="mr-1">{getPlatformIcon(platform)}</span>
+                      {platform}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Metadata */}
+                <div className="mt-4 flex items-center justify-between text-xs text-gray-500 border-t border-glass-border pt-3">
+                  <span>{formatFileSize(publication.fileSize)}</span>
+                  <span>
+                    {format(new Date(publication.createdAt), 'dd MMM yyyy', { locale: ru })}
+                  </span>
+                </div>
+
+                {/* Actions */}
+                <div className="mt-4 flex items-center space-x-2">
+                  <Button3D
+                    onClick={() => setSelectedPublication(publication)}
+                    variant="secondary"
+                    className="flex-1 py-1.5 text-sm"
+                  >
+                    <Eye className="w-4 h-4 mr-1.5" />
+                    Просмотр
+                  </Button3D>
+
+                  {publication.status === 'FAILED' && (
+                    <Button3D
+                      onClick={() => handleRetry(publication.id)}
+                      disabled={retryingId === publication.id}
+                      variant="secondary"
+                      className="px-3 py-1.5"
+                      title="Повторить"
+                    >
+                      <RefreshCw
+                        className={`w-4 h-4 ${retryingId === publication.id ? 'animate-spin' : ''}`}
+                      />
+                    </Button3D>
+                  )}
+
+                  <Button3D
+                    onClick={() => handleDelete(publication.id)}
+                    disabled={deletingId === publication.id}
+                    variant="danger"
+                    className="px-3 py-1.5"
+                    title="Удалить"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button3D>
+                </div>
+              </div>
+            </GlassCard>
           </motion.div>
         ))}
       </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white px-4 py-3 sm:px-6 rounded-lg shadow">
-          <div className="flex flex-1 justify-between sm:hidden">
-            <button
+        <GlassCard className="flex items-center justify-between px-6 py-4">
+          <div className="text-sm text-gray-400">
+            Показано <span className="font-medium text-white">{(currentPage - 1) * limit + 1}</span> -{' '}
+            <span className="font-medium text-white">{Math.min(currentPage * limit, total)}</span> из{' '}
+            <span className="font-medium text-white">{total}</span> публикаций
+          </div>
+          <div className="flex space-x-2">
+            <Button3D
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="secondary"
+              className="px-4 py-1.5 text-xs"
             >
               Назад
-            </button>
-            <button
+            </Button3D>
+            
+            <div className="flex items-center space-x-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(
+                  page =>
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 1 && page <= currentPage + 1)
+                )
+                .map((page, index, array) => (
+                  <div key={page} className="flex items-center">
+                    {index > 0 && array[index - 1] !== page - 1 && (
+                      <span className="px-2 text-gray-500">...</span>
+                    )}
+                    <button
+                      onClick={() => onPageChange(page)}
+                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                        page === currentPage
+                          ? 'bg-primary text-white shadow-lg shadow-primary/25'
+                          : 'text-gray-400 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  </div>
+                ))}
+            </div>
+
+            <Button3D
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="relative ml-3 inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="secondary"
+              className="px-4 py-1.5 text-xs"
             >
               Вперед
-            </button>
+            </Button3D>
           </div>
-          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Показано <span className="font-medium">{(currentPage - 1) * limit + 1}</span> -{' '}
-                <span className="font-medium">{Math.min(currentPage * limit, total)}</span> из{' '}
-                <span className="font-medium">{total}</span> публикаций
-              </p>
-            </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                <button
-                  onClick={() => onPageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Назад
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(
-                    page =>
-                      page === 1 ||
-                      page === totalPages ||
-                      (page >= currentPage - 1 && page <= currentPage + 1)
-                  )
-                  .map((page, index, array) => (
-                    <>
-                      {index > 0 && array[index - 1] !== page - 1 && (
-                        <span
-                          key={`ellipsis-${page}`}
-                          className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
-                        >
-                          ...
-                        </span>
-                      )}
-                      <button
-                        key={page}
-                        onClick={() => onPageChange(page)}
-                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                          page === currentPage
-                            ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    </>
-                  ))}
-                <button
-                  onClick={() => onPageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Вперед
-                </button>
-              </nav>
-            </div>
-          </div>
-        </div>
+        </GlassCard>
       )}
 
       {/* Details Modal */}
@@ -307,4 +288,3 @@ export default function PublicationsList({
     </div>
   );
 }
-

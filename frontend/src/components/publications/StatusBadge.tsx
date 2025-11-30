@@ -62,9 +62,10 @@ export default function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
         ${sizeClasses[size]}
       `}
     >
-      <Icon className={`${iconSizes[size]} ${'animate' in config && config.animate ? 'animate-spin' : ''}`} />
+      <Icon
+        className={`${iconSizes[size]} ${'animate' in config && config.animate ? 'animate-spin' : ''}`}
+      />
       <span>{config.label}</span>
     </span>
   );
 }
-
