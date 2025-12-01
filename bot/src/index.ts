@@ -164,13 +164,40 @@ bot.catch((err, ctx) => {
 
 // Commands - wrapped in try-catch for safety
 bot.start(async ctx => {
+  const startTime = Date.now();
+  logger.info('📥 /start command received in bot.start handler', {
+    userId: ctx.from?.id,
+    username: ctx.from?.username,
+    chatId: ctx.chat?.id,
+    hasSession: !!ctx.session,
+    timestamp: new Date().toISOString(),
+  });
+  
   try {
     await handleStart(ctx);
-  } catch (error) {
-    logger.error('Error in start command', {
-      error: error instanceof Error ? error.message : String(error),
+    logger.info('✅ /start command completed successfully', {
       userId: ctx.from?.id,
+      totalTime: Date.now() - startTime,
     });
+  } catch (error) {
+    logger.error('❌ Error in start command wrapper', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      userId: ctx.from?.id,
+      chatId: ctx.chat?.id,
+      totalTime: Date.now() - startTime,
+    });
+    
+    // Try to send error message
+    try {
+      await ctx.reply(
+        '❌ Сталася помилка при обробці команди /start. Будь ласка, спробуйте ще раз.'
+      );
+    } catch (replyError) {
+      logger.error('❌ Failed to send error message in start wrapper', {
+        error: replyError instanceof Error ? replyError.message : String(replyError),
+      });
+    }
   }
 });
 

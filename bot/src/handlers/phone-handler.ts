@@ -6,9 +6,7 @@ import { logger } from '../utils/logger';
 export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
   try {
     if (!ctx.session) {
-      await ctx.reply(
-        '❌ Будь ласка, спочатку почніть розмову командою /start.'
-      );
+      await ctx.reply('❌ Будь ласка, спочатку почніть розмову командою /start.');
       return;
     }
 
@@ -73,24 +71,24 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
 
       await ctx.reply(
         `✅ Дякуємо! Ваша інформація отримана та збережена.\n\n` +
-        `📧 Email: ${ctx.session.email}\n` +
-        `👤 Ім'я: ${ctx.session.firstName || ''} ${ctx.session.lastName || ''}\n` +
-        `📱 Телефон: ${ctx.session.phoneNumber}\n\n` +
-        `Ви можете повернутися на сторінку для завершення оплати.\n\n` +
-        `Я надішлю доступ до вашого тарифу на курс одразу після оплати.`
+          `📧 Email: ${ctx.session.email}\n` +
+          `👤 Ім'я: ${ctx.session.firstName || ''} ${ctx.session.lastName || ''}\n` +
+          `📱 Телефон: ${ctx.session.phoneNumber}\n\n` +
+          `Ви можете повернутися на сторінку для завершення оплати.\n\n` +
+          `Я надішлю доступ до вашого тарифу на курс одразу після оплати.`
       );
 
       // Clear session after successful processing
       ctx.session = {};
     } catch (error) {
       logger.error('Failed to send data to backend', error);
-      
+
       const errorMessage = error instanceof Error ? error.message : 'Невідома помилка';
-      
+
       await ctx.reply(
         `❌ Не вдалося обробити вашу інформацію.\n\n` +
-        `Помилка: ${errorMessage}\n\n` +
-        `Будь ласка, спробуйте ще раз або зверніться до підтримки.`
+          `Помилка: ${errorMessage}\n\n` +
+          `Будь ласка, спробуйте ще раз або зверніться до підтримки.`
       );
 
       // Reset waiting state to allow retry
@@ -103,4 +101,3 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
     );
   }
 }
-
