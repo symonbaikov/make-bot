@@ -325,6 +325,18 @@ async function startBot() {
         res.json({ status: 'ok', mode: 'webhook', webhookPath: WEBHOOK_PATH });
       });
 
+      // Root path handler - return bot info instead of 404
+      app.get('/', (_req, res) => {
+        res.json({ 
+          status: 'ok', 
+          service: 'telegram-bot',
+          mode: 'webhook', 
+          webhookPath: WEBHOOK_PATH,
+          webhookUrl: WEBHOOK_URL,
+          message: 'Telegram bot webhook endpoint. Use POST to send updates.'
+        });
+      });
+
       // Test endpoint to verify webhook is accessible and optionally refresh it
       app.get('/webhook-test', async (req, res) => {
         try {
@@ -388,17 +400,19 @@ async function startBot() {
       app.post('/webhook-setup', resetWebhookHandler);
       app.post('/webhook/reset', resetWebhookHandler);
 
-      // Webhook endpoint - use webhookCallback for proper request handling
-      app.post(WEBHOOK_PATH, async (req, res) => {
+      // Webhook handler function - shared between / and WEBHOOK_PATH
+      const webhookHandler = async (req: express.Request, res: express.Response) => {
         const startTime = Date.now();
         const updateId = req.body?.update_id;
+        const requestPath = req.path || req.url;
 
         // Log ALL webhook requests (even if body is empty)
         logger.info('📥 Webhook request received', {
           updateId,
           hasBody: !!req.body,
           bodyKeys: req.body ? Object.keys(req.body) : [],
-          path: WEBHOOK_PATH,
+          requestPath,
+          expectedPath: WEBHOOK_PATH,
           message: req.body?.message?.text,
           command: req.body?.message?.entities?.[0]?.type,
           userId: req.body?.message?.from?.id,
@@ -485,6 +499,18 @@ async function startBot() {
 
           return res.sendStatus(200); // Always return 200 to Telegram to avoid retries
         }
+      };
+
+      // Register webhook handler on both paths to handle different configurations
+      // Some setups use root path, others use /webhook
+      app.post('/', webhookHandler); // Fallback for root path
+      app.post(WEBHOOK_PATH, webhookHandler); // Primary webhook path
+      
+      // Log which paths are registered
+      logger.info('Webhook handlers registered', {
+        rootPath: '/',
+        webhookPath: WEBHOOK_PATH,
+        webhookUrl: WEBHOOK_URL,
       });
 
       // Start Express server
