@@ -23,30 +23,32 @@ const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const IS_PRODUCTION = NODE_ENV === 'production';
 const USE_WEBHOOK = !!WEBHOOK_URL;
-const WEBHOOK_URL_PARSED = WEBHOOK_URL ? (() => {
-  try {
-    const parsed = new URL(WEBHOOK_URL);
-    if (parsed.protocol !== 'https:') {
-      logger.error('❌ TELEGRAM_WEBHOOK_URL must use HTTPS', { webhookUrl: WEBHOOK_URL });
-      process.exit(1);
-    }
+const WEBHOOK_URL_PARSED = WEBHOOK_URL
+  ? (() => {
+      try {
+        const parsed = new URL(WEBHOOK_URL);
+        if (parsed.protocol !== 'https:') {
+          logger.error('❌ TELEGRAM_WEBHOOK_URL must use HTTPS', { webhookUrl: WEBHOOK_URL });
+          process.exit(1);
+        }
 
-    if (!parsed.pathname || parsed.pathname === '/') {
-      logger.error(
-        '❌ TELEGRAM_WEBHOOK_URL must include a path (e.g. https://example.com/webhook)',
-        { webhookUrl: WEBHOOK_URL }
-      );
-      process.exit(1);
-    }
-    return parsed;
-  } catch (error) {
-    logger.error('❌ Invalid TELEGRAM_WEBHOOK_URL', {
-      error: error instanceof Error ? error.message : String(error),
-      webhookUrl: WEBHOOK_URL,
-    });
-    process.exit(1);
-  }
-})() : null;
+        if (!parsed.pathname || parsed.pathname === '/') {
+          logger.error(
+            '❌ TELEGRAM_WEBHOOK_URL must include a path (e.g. https://example.com/webhook)',
+            { webhookUrl: WEBHOOK_URL }
+          );
+          process.exit(1);
+        }
+        return parsed;
+      } catch (error) {
+        logger.error('❌ Invalid TELEGRAM_WEBHOOK_URL', {
+          error: error instanceof Error ? error.message : String(error),
+          webhookUrl: WEBHOOK_URL,
+        });
+        process.exit(1);
+      }
+    })()
+  : null;
 const WEBHOOK_PATH = WEBHOOK_URL_PARSED?.pathname || '/webhook';
 
 // Log environment check
@@ -129,7 +131,9 @@ async function ensureWebhook(reason: string): Promise<WebhookStatus> {
   }
 
   if (status.pendingUpdates > 0) {
-    logger.warn('⚠️ Pending updates detected after webhook setup', { pendingUpdates: status.pendingUpdates });
+    logger.warn('⚠️ Pending updates detected after webhook setup', {
+      pendingUpdates: status.pendingUpdates,
+    });
   }
 
   logger.info('✅ Webhook configured', {
@@ -153,9 +157,9 @@ bot.catch((err, ctx) => {
     update: ctx.update,
     userId: ctx.from?.id,
   });
-  
+
   // Use centralized error handler
-  handleError(ctx, err).catch((handleError) => {
+  handleError(ctx, err).catch(handleError => {
     logger.error('❌ Failed to handle error', {
       error: handleError instanceof Error ? handleError.message : String(handleError),
     });
@@ -165,14 +169,20 @@ bot.catch((err, ctx) => {
 // Commands - wrapped in try-catch for safety
 bot.start(async ctx => {
   const startTime = Date.now();
+  const commandText = ctx.message?.text || '';
+  const commandArgs = ctx.startPayload || '';
+  
   logger.info('📥 /start command received in bot.start handler', {
     userId: ctx.from?.id,
     username: ctx.from?.username,
     chatId: ctx.chat?.id,
     hasSession: !!ctx.session,
+    commandText,
+    commandArgs,
+    messageId: ctx.message?.message_id,
     timestamp: new Date().toISOString(),
   });
-  
+
   try {
     await handleStart(ctx);
     logger.info('✅ /start command completed successfully', {
@@ -187,7 +197,7 @@ bot.start(async ctx => {
       chatId: ctx.chat?.id,
       totalTime: Date.now() - startTime,
     });
-    
+
     // Try to send error message
     try {
       await ctx.reply(
@@ -215,6 +225,22 @@ bot.help(async ctx => {
 // Text messages (data collection)
 bot.on('text', async ctx => {
   try {
+    const messageText = ctx.message?.text || '';
+    
+    // Fallback: Handle /start command if it wasn't caught by bot.start handler
+    // This can happen if command is not properly recognized via webhook
+    if (messageText.trim().toLowerCase().startsWith('/start')) {
+      logger.info('📥 /start command detected in text handler (fallback)', {
+        userId: ctx.from?.id,
+        messageText,
+        chatId: ctx.chat?.id,
+      });
+      
+      // Call handleStart directly
+      await handleStart(ctx);
+      return;
+    }
+    
     // Check what data we're waiting for
     if (ctx.session?.waitingForEmail) {
       await handleEmailInput(ctx);
@@ -303,8 +329,9 @@ async function startBot() {
       app.get('/webhook-test', async (req, res) => {
         try {
           const shouldReset =
-            String((req.query?.reset ?? req.query?.fix ?? req.query?.refresh) || '').toLowerCase() ===
-            'true';
+            String(
+              (req.query?.reset ?? req.query?.fix ?? req.query?.refresh) || ''
+            ).toLowerCase() === 'true';
 
           let webhookStatus = await getWebhookStatus();
 
@@ -391,12 +418,27 @@ async function startBot() {
           }
 
           // Add detailed logging before handling update
+          const messageText = req.body.message?.text;
+          const entities = req.body.message?.entities || [];
+          const commandEntity = entities.find((e: any) => e.type === 'bot_command');
+          
           logger.info('🔄 Processing update', {
             updateId,
-            updateType: req.body.message ? 'message' : req.body.callback_query ? 'callback_query' : 'unknown',
-            messageText: req.body.message?.text,
-            command: req.body.message?.entities?.[0]?.type,
+            updateType: req.body.message
+              ? 'message'
+              : req.body.callback_query
+                ? 'callback_query'
+                : 'unknown',
+            messageText,
+            entities: entities.map((e: any) => ({ type: e.type, offset: e.offset, length: e.length })),
+            commandEntity: commandEntity ? {
+              type: commandEntity.type,
+              offset: commandEntity.offset,
+              length: commandEntity.length,
+              command: messageText?.substring(commandEntity.offset, commandEntity.offset + commandEntity.length),
+            } : null,
             userId: req.body.message?.from?.id,
+            chatId: req.body.message?.chat?.id,
           });
 
           // Handle update with timeout to prevent hanging
@@ -423,7 +465,7 @@ async function startBot() {
             body: req.body,
             processingTime: `${processingTime}ms`,
           });
-          
+
           // Try to send error message to user if possible
           try {
             const userId = req.body?.message?.from?.id;
@@ -440,7 +482,7 @@ async function startBot() {
               error: sendError instanceof Error ? sendError.message : String(sendError),
             });
           }
-          
+
           return res.sendStatus(200); // Always return 200 to Telegram to avoid retries
         }
       });
