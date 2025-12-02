@@ -320,7 +320,7 @@ async function startBot() {
       const app = express();
 
       // Log ALL incoming requests for debugging
-      app.use((req, res, next) => {
+      app.use((req, _res, next) => {
         logger.info('📥 Incoming HTTP request', {
           method: req.method,
           path: req.path,
