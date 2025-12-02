@@ -171,7 +171,7 @@ bot.start(async ctx => {
   const startTime = Date.now();
   const commandText = ctx.message?.text || '';
   const commandArgs = ctx.startPayload || '';
-  
+
   logger.info('📥 /start command received in bot.start handler', {
     userId: ctx.from?.id,
     username: ctx.from?.username,
@@ -226,7 +226,7 @@ bot.help(async ctx => {
 bot.on('text', async ctx => {
   try {
     const messageText = ctx.message?.text || '';
-    
+
     // Fallback: Handle /start command if it wasn't caught by bot.start handler
     // This can happen if command is not properly recognized via webhook
     if (messageText.trim().toLowerCase().startsWith('/start')) {
@@ -235,12 +235,12 @@ bot.on('text', async ctx => {
         messageText,
         chatId: ctx.chat?.id,
       });
-      
+
       // Call handleStart directly
       await handleStart(ctx);
       return;
     }
-    
+
     // Check what data we're waiting for
     if (ctx.session?.waitingForEmail) {
       await handleEmailInput(ctx);
@@ -318,6 +318,24 @@ async function startBot() {
 
       // Create Express app for webhook
       const app = express();
+
+      // Log ALL incoming requests for debugging
+      app.use((req, res, next) => {
+        logger.info('📥 Incoming HTTP request', {
+          method: req.method,
+          path: req.path,
+          url: req.url,
+          headers: {
+            'content-type': req.headers['content-type'],
+            'user-agent': req.headers['user-agent'],
+            'x-forwarded-for': req.headers['x-forwarded-for'],
+          },
+          hasBody: !!req.body,
+          bodySize: req.headers['content-length'],
+        });
+        next();
+      });
+
       app.use(express.json());
 
       // Health check endpoint
@@ -327,13 +345,13 @@ async function startBot() {
 
       // Root path handler - return bot info instead of 404
       app.get('/', (_req, res) => {
-        res.json({ 
-          status: 'ok', 
+        res.json({
+          status: 'ok',
           service: 'telegram-bot',
-          mode: 'webhook', 
+          mode: 'webhook',
           webhookPath: WEBHOOK_PATH,
           webhookUrl: WEBHOOK_URL,
-          message: 'Telegram bot webhook endpoint. Use POST to send updates.'
+          message: 'Telegram bot webhook endpoint. Use POST to send updates.',
         });
       });
 
@@ -346,6 +364,9 @@ async function startBot() {
             ).toLowerCase() === 'true';
 
           let webhookStatus = await getWebhookStatus();
+
+          // Get full webhook info for debugging
+          const fullWebhookInfo = await bot.telegram.getWebhookInfo();
 
           if (shouldReset || webhookStatus.needsReset) {
             try {
@@ -366,9 +387,19 @@ async function startBot() {
           return res.json({
             status: 'ok',
             webhook: webhookStatus,
+            fullWebhookInfo: {
+              url: fullWebhookInfo.url,
+              has_custom_certificate: fullWebhookInfo.has_custom_certificate,
+              pending_update_count: fullWebhookInfo.pending_update_count,
+              last_error_date: fullWebhookInfo.last_error_date,
+              last_error_message: fullWebhookInfo.last_error_message,
+              max_connections: fullWebhookInfo.max_connections,
+              ip_address: fullWebhookInfo.ip_address,
+            },
             expectedUrl: WEBHOOK_URL,
             path: WEBHOOK_PATH,
             reset: shouldReset,
+            timestamp: new Date().toISOString(),
           });
         } catch (error) {
           return res.status(500).json({
@@ -406,21 +437,27 @@ async function startBot() {
         const updateId = req.body?.update_id;
         const requestPath = req.path || req.url;
 
-        // Log ALL webhook requests (even if body is empty)
+        // Log ALL webhook requests (even if body is empty) with full details
         logger.info('📥 Webhook request received', {
           updateId,
           hasBody: !!req.body,
           bodyKeys: req.body ? Object.keys(req.body) : [],
           requestPath,
           expectedPath: WEBHOOK_PATH,
+          method: req.method,
           message: req.body?.message?.text,
           command: req.body?.message?.entities?.[0]?.type,
           userId: req.body?.message?.from?.id,
+          chatId: req.body?.message?.chat?.id,
           timestamp: new Date().toISOString(),
           headers: {
             'content-type': req.headers['content-type'],
             'user-agent': req.headers['user-agent'],
+            'x-forwarded-for': req.headers['x-forwarded-for'],
+            'x-forwarded-proto': req.headers['x-forwarded-proto'],
+            host: req.headers['host'],
           },
+          rawBody: req.body ? JSON.stringify(req.body).substring(0, 500) : null, // First 500 chars for debugging
         });
 
         try {
@@ -435,7 +472,7 @@ async function startBot() {
           const messageText = req.body.message?.text;
           const entities = req.body.message?.entities || [];
           const commandEntity = entities.find((e: any) => e.type === 'bot_command');
-          
+
           logger.info('🔄 Processing update', {
             updateId,
             updateType: req.body.message
@@ -444,13 +481,22 @@ async function startBot() {
                 ? 'callback_query'
                 : 'unknown',
             messageText,
-            entities: entities.map((e: any) => ({ type: e.type, offset: e.offset, length: e.length })),
-            commandEntity: commandEntity ? {
-              type: commandEntity.type,
-              offset: commandEntity.offset,
-              length: commandEntity.length,
-              command: messageText?.substring(commandEntity.offset, commandEntity.offset + commandEntity.length),
-            } : null,
+            entities: entities.map((e: any) => ({
+              type: e.type,
+              offset: e.offset,
+              length: e.length,
+            })),
+            commandEntity: commandEntity
+              ? {
+                  type: commandEntity.type,
+                  offset: commandEntity.offset,
+                  length: commandEntity.length,
+                  command: messageText?.substring(
+                    commandEntity.offset,
+                    commandEntity.offset + commandEntity.length
+                  ),
+                }
+              : null,
             userId: req.body.message?.from?.id,
             chatId: req.body.message?.chat?.id,
           });
@@ -505,12 +551,30 @@ async function startBot() {
       // Some setups use root path, others use /webhook
       app.post('/', webhookHandler); // Fallback for root path
       app.post(WEBHOOK_PATH, webhookHandler); // Primary webhook path
-      
+
       // Log which paths are registered
       logger.info('Webhook handlers registered', {
         rootPath: '/',
         webhookPath: WEBHOOK_PATH,
         webhookUrl: WEBHOOK_URL,
+      });
+
+      // Catch-all handler for unhandled routes - log for debugging
+      app.use((req, res) => {
+        logger.warn('⚠️ Unhandled route', {
+          method: req.method,
+          path: req.path,
+          url: req.url,
+          headers: req.headers,
+          body: req.body,
+        });
+        res.status(404).json({
+          status: 'error',
+          message: 'Route not found',
+          path: req.path,
+          method: req.method,
+          availablePaths: ['/', WEBHOOK_PATH, '/health', '/webhook-test', '/webhook-setup'],
+        });
       });
 
       // Start Express server
@@ -527,6 +591,44 @@ async function startBot() {
             lastErrorMessage: webhookStatus.lastError,
             path: WEBHOOK_PATH,
           });
+
+          // Schedule periodic webhook status checks
+          setInterval(async () => {
+            try {
+              const status = await getWebhookStatus();
+              if (status.lastError) {
+                logger.error('⚠️ Webhook error detected from Telegram', {
+                  lastError: status.lastError,
+                  lastErrorDate: status.lastErrorDate
+                    ? new Date(status.lastErrorDate * 1000).toISOString()
+                    : undefined,
+                  url: status.url,
+                  pendingUpdates: status.pendingUpdates,
+                });
+
+                // Try to reset webhook if there's an error
+                if (status.lastError) {
+                  logger.info('🔄 Attempting to reset webhook due to error');
+                  try {
+                    await ensureWebhook('periodic-reset-due-to-error');
+                    logger.info('✅ Webhook reset successfully');
+                  } catch (resetError) {
+                    logger.error('❌ Failed to reset webhook', {
+                      error: resetError instanceof Error ? resetError.message : String(resetError),
+                    });
+                  }
+                }
+              } else if (status.pendingUpdates > 0) {
+                logger.warn('⚠️ Pending updates detected', {
+                  pendingUpdates: status.pendingUpdates,
+                });
+              }
+            } catch (error) {
+              logger.error('❌ Error checking webhook status', {
+                error: error instanceof Error ? error.message : String(error),
+              });
+            }
+          }, 60000); // Check every minute
         } catch (error) {
           logger.error('❌ Failed to set webhook', {
             error: error instanceof Error ? error.message : String(error),
