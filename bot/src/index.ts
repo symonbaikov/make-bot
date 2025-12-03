@@ -393,24 +393,66 @@ async function startBot() {
       // Create Express app for webhook
       const app = express();
 
-      // Log ALL incoming requests for debugging
+      // Log ALL incoming requests for debugging - MUST be first middleware
       app.use((req, _res, next) => {
-        logger.info('📥 Incoming HTTP request', {
+        // Log immediately, before body parsing
+        logger.info('📥 Incoming HTTP request (raw)', {
           method: req.method,
           path: req.path,
           url: req.url,
+          originalUrl: req.originalUrl,
           headers: {
             'content-type': req.headers['content-type'],
             'user-agent': req.headers['user-agent'],
             'x-forwarded-for': req.headers['x-forwarded-for'],
+            host: req.headers['host'],
           },
-          hasBody: !!req.body,
           bodySize: req.headers['content-length'],
+          ip: req.ip,
+          ips: req.ips,
         });
         next();
       });
 
-      app.use(express.json());
+      // Parse JSON body
+      app.use(
+        express.json({
+          limit: '10mb', // Increase limit for large updates
+          verify: (req, _res, buf) => {
+            // Log raw body for debugging
+            const path = req.url?.split('?')[0] || '/';
+            if (path === WEBHOOK_PATH || path === '/') {
+              try {
+                const bodyStr = buf.toString('utf8');
+                logger.info('📥 Raw webhook body received', {
+                  path: path,
+                  url: req.url,
+                  bodyLength: bodyStr.length,
+                  bodyPreview: bodyStr.substring(0, 200),
+                  hasUpdateId: bodyStr.includes('update_id'),
+                });
+              } catch (err) {
+                logger.warn('Failed to log raw body', { error: err });
+              }
+            }
+          },
+        })
+      );
+
+      // Log parsed body
+      app.use((req, _res, next) => {
+        if (req.path === WEBHOOK_PATH || req.path === '/') {
+          logger.info('📥 Parsed webhook body', {
+            method: req.method,
+            path: req.path,
+            hasBody: !!req.body,
+            updateId: req.body?.update_id,
+            messageText: req.body?.message?.text,
+            userId: req.body?.message?.from?.id,
+          });
+        }
+        next();
+      });
 
       // Health check endpoint
       app.get('/health', (_req, res) => {
@@ -682,9 +724,38 @@ async function startBot() {
       });
 
       // Start Express server
-      app.listen(PORT, async () => {
-        logger.info(`✅ Webhook server listening on port ${PORT}`);
-        logger.info(`✅ Health endpoint available at: http://0.0.0.0:${PORT}/health`);
+      const portNumber = typeof PORT === 'string' ? parseInt(PORT, 10) : PORT;
+      const server = app.listen(portNumber, '0.0.0.0', async () => {
+        const address = server.address();
+        logger.info(`✅ Webhook server listening`, {
+          port: portNumber,
+          address: typeof address === 'string' ? address : `${address?.address}:${address?.port}`,
+          family: typeof address === 'object' ? address?.family : undefined,
+        });
+        logger.info(`✅ Health endpoint available at: http://0.0.0.0:${portNumber}/health`);
+        logger.info(`✅ Webhook endpoint should be: ${WEBHOOK_URL}`);
+        logger.info(`✅ Webhook path: ${WEBHOOK_PATH}`);
+        logger.info(`✅ Registered routes: POST /, POST ${WEBHOOK_PATH}, GET /health`);
+        logger.info(`✅ Environment: ${NODE_ENV}, Production: ${IS_PRODUCTION}`);
+
+        // Log all registered routes for debugging
+        const routes: string[] = [];
+        app._router?.stack?.forEach((middleware: any) => {
+          if (middleware.route) {
+            routes.push(
+              `${Object.keys(middleware.route.methods).join(', ').toUpperCase()} ${middleware.route.path}`
+            );
+          } else if (middleware.name === 'router') {
+            middleware.handle?.stack?.forEach((handler: any) => {
+              if (handler.route) {
+                routes.push(
+                  `${Object.keys(handler.route.methods).join(', ').toUpperCase()} ${handler.route.path}`
+                );
+              }
+            });
+          }
+        });
+        logger.info(`✅ Registered Express routes:`, { routes });
 
         try {
           const webhookStatus = await ensureWebhook('startup');
