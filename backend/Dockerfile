@@ -123,8 +123,9 @@ RUN chown -R nodejs:nodejs /app/dist /app/logs /app/docker-entrypoint.sh /app/pa
 USER nodejs
 
 # Railway automatically sets PORT environment variable
-# Use PORT from environment, default to 3000 for local development
-ENV PORT=${PORT:-3000}
+# Define PORT as build argument first, then use it in ENV
+ARG PORT=3000
+ENV PORT=${PORT}
 ENV NODE_ENV=production
 # Don't set workspace variables here - they cause conflicts with npx --no-workspaces
 
