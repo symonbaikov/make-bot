@@ -29,12 +29,20 @@ export function sessionMiddleware() {
     const userId = ctx.from?.id;
 
     if (!userId) {
+      // Log when userId is missing
+      const { logger } = await import('../utils/logger');
+      logger.warn('Session middleware: userId is missing', {
+        hasFrom: !!ctx.from,
+        updateType: ctx.update ? Object.keys(ctx.update)[1] : 'unknown',
+      });
       return next();
     }
 
     // Get or create session
     if (!sessions.has(userId)) {
       sessions.set(userId, {});
+      const { logger } = await import('../utils/logger');
+      logger.info('Session created', { userId });
     }
 
     ctx.session = sessions.get(userId);
@@ -42,6 +50,15 @@ export function sessionMiddleware() {
     // Clean up old sessions (optional - can be improved with TTL)
     // For now, sessions persist for the lifetime of the bot process
 
-    await next();
+    try {
+      await next();
+    } catch (error) {
+      const { logger } = await import('../utils/logger');
+      logger.error('Error in session middleware next()', {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+      });
+      throw error;
+    }
   };
 }

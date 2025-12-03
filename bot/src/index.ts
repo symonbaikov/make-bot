@@ -622,9 +622,38 @@ async function startBot() {
             updateId,
             userId: req.body?.message?.from?.id,
             chatId: req.body?.message?.chat?.id,
+            updateType: req.body.message
+              ? 'message'
+              : req.body.callback_query
+                ? 'callback_query'
+                : 'unknown',
           });
 
-          const updatePromise = bot.handleUpdate(req.body);
+          // Wrap bot.handleUpdate to catch all errors
+          const updatePromise = (async () => {
+            try {
+              logger.info('🔄 Calling bot.handleUpdate', {
+                updateId,
+                hasMessage: !!req.body.message,
+                hasCallbackQuery: !!req.body.callback_query,
+              });
+
+              await bot.handleUpdate(req.body);
+
+              logger.info('🔄 bot.handleUpdate completed', {
+                updateId,
+              });
+            } catch (handleError) {
+              logger.error('❌ Error in bot.handleUpdate', {
+                error: handleError instanceof Error ? handleError.message : String(handleError),
+                stack: handleError instanceof Error ? handleError.stack : undefined,
+                updateId,
+                errorType: handleError?.constructor?.name,
+              });
+              throw handleError;
+            }
+          })();
+
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('Update handling timeout after 10s')), 10000);
           });
@@ -648,6 +677,7 @@ async function startBot() {
               userId: req.body?.message?.from?.id,
               chatId: req.body?.message?.chat?.id,
               errorType: updateError?.constructor?.name,
+              isTimeout: updateError instanceof Error && updateError.message.includes('timeout'),
             });
             // Don't throw - we still want to return 200 to Telegram
           }
