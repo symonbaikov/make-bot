@@ -39,15 +39,31 @@ while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
       process.exit(1);
     }
     
-    // Check if SSL is required (Railway PostgreSQL usually requires SSL)
-    const requiresSSL = dbUrl.includes('railway') || dbUrl.includes('sslmode=require') || dbUrl.includes('?sslmode=');
-    const sslConfig = requiresSSL ? { rejectUnauthorized: false } : undefined;
+    // For Railway internal addresses (.railway.internal), SSL is usually not needed
+    // For external addresses, SSL may be required
+    const isInternalRailway = dbUrl.includes('railway.internal');
+    const hasSSLMode = dbUrl.includes('sslmode=');
     
-    console.log('Testing connection with SSL:', requiresSSL ? 'enabled' : 'disabled');
+    // Parse sslmode from URL if present
+    let sslConfig = undefined;
+    if (hasSSLMode) {
+      const sslModeMatch = dbUrl.match(/[?&]sslmode=([^&]+)/);
+      const sslMode = sslModeMatch ? sslModeMatch[1] : '';
+      if (sslMode === 'require' || sslMode === 'prefer') {
+        sslConfig = { rejectUnauthorized: false };
+      }
+    } else if (!isInternalRailway && (dbUrl.includes('railway.app') || dbUrl.includes('railway'))) {
+      // External Railway addresses may need SSL
+      sslConfig = { rejectUnauthorized: false };
+    }
+    
+    console.log('Testing connection:');
+    console.log('   Host type:', isInternalRailway ? 'internal Railway' : 'external');
+    console.log('   SSL:', sslConfig ? 'enabled' : 'disabled');
     
     const client = new Client({
       connectionString: dbUrl,
-      connectionTimeoutMillis: 5000,
+      connectionTimeoutMillis: 10000, // Increased timeout to 10 seconds
       ssl: sslConfig,
     });
     
@@ -68,6 +84,7 @@ while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
         if (e.code) console.log('   Error code:', e.code);
         if (e.host) console.log('   Host:', e.host);
         if (e.port) console.log('   Port:', e.port);
+        if (e.address) console.log('   Address:', e.address);
         client.end().catch(() => {});
         process.exit(1);
       });
