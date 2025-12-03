@@ -272,17 +272,21 @@ bot.on('text', async ctx => {
   try {
     const messageText = ctx.message?.text || '';
 
-    // Fallback: Handle /start command if it wasn't caught by bot.start handler
-    // This can happen if command is not properly recognized via webhook
-    if (messageText.trim().toLowerCase().startsWith('/start')) {
-      logger.info('📥 /start command detected in text handler (fallback)', {
-        userId: ctx.from?.id,
-        messageText,
-        chatId: ctx.chat?.id,
-      });
-
-      // Call handleStart directly
-      await handleStart(ctx);
+    // Skip commands - they should be handled by command handlers (bot.start, bot.help)
+    // Only handle /start as fallback if command handler didn't catch it
+    if (messageText.trim().startsWith('/')) {
+      if (
+        messageText.trim().toLowerCase() === '/start' ||
+        messageText.trim().toLowerCase().startsWith('/start ')
+      ) {
+        logger.info('📥 /start command detected in text handler (fallback)', {
+          userId: ctx.from?.id,
+          messageText,
+          chatId: ctx.chat?.id,
+        });
+        await handleStart(ctx);
+      }
+      // Skip other commands - let them be handled by their handlers
       return;
     }
 

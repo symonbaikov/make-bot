@@ -27,9 +27,9 @@ export async function handleStart(ctx: BotContext): Promise<void> {
       `✋ Вітаю\n\n` +
       `Ви вже майже розпочали навчання!\n\n` +
       `Будь ласка, оберіть тариф, який вам підходить:\n\n` +
-      `📦 **Базовий** - 64 GBP\n` +
-      `⭐ **Стандарт** - 97 GBP\n` +
-      `💎 **Преміум** - 147 GBP\n\n` +
+      `📦 Базовий - 64 GBP\n` +
+      `⭐ Стандарт - 97 GBP\n` +
+      `💎 Преміум - 147 GBP\n\n` +
       `Натисніть на кнопку з тарифом, який ви хочете обрати:`;
 
     const planKeyboard = getPlanKeyboard();
@@ -49,9 +49,9 @@ export async function handleStart(ctx: BotContext): Promise<void> {
         messagePreview: welcomeMessage.substring(0, 50),
       });
 
+      // Try without Markdown first to avoid parsing errors
       const replyResult = await ctx.reply(welcomeMessage, {
         reply_markup: planKeyboard,
-        parse_mode: 'Markdown',
       });
 
       logger.info('✅ Welcome message sent successfully', {

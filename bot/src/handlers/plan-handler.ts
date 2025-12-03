@@ -79,12 +79,12 @@ export async function handlePlanSelection(ctx: BotContext): Promise<void> {
 
     // Send confirmation and request email
     const emailRequestMessage =
-      `✅ Тариф вибрано: **${planConfig.name}**\n\n` +
+      `✅ Тариф вибрано: ${planConfig.name}\n\n` +
       `💰 Вартість: ${planConfig.amount} GBP\n\n` +
       `Тепер, будь ласка, надайте вашу адресу електронної пошти:\n\n` +
       `📧 Будь ласка, надішліть мені вашу адресу електронної пошти:`;
 
-    await ctx.reply(emailRequestMessage, { parse_mode: 'Markdown' });
+    await ctx.reply(emailRequestMessage);
   } catch (error) {
     logger.error('Error in plan selection handler', error);
     try {
