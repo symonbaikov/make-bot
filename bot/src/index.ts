@@ -185,28 +185,50 @@ bot.start(async ctx => {
   });
 
   try {
+    logger.info('🔄 Calling handleStart function', {
+      userId: ctx.from?.id,
+      chatId: ctx.chat?.id,
+    });
+
     await handleStart(ctx);
+
+    const totalTime = Date.now() - startTime;
     logger.info('✅ /start command completed successfully', {
       userId: ctx.from?.id,
-      totalTime: Date.now() - startTime,
+      totalTime: `${totalTime}ms`,
     });
   } catch (error) {
+    const totalTime = Date.now() - startTime;
     logger.error('❌ Error in start command wrapper', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       userId: ctx.from?.id,
       chatId: ctx.chat?.id,
-      totalTime: Date.now() - startTime,
+      totalTime: `${totalTime}ms`,
+      errorType: error?.constructor?.name,
     });
 
     // Try to send error message
     try {
+      logger.info('🔄 Attempting to send error message to user', {
+        userId: ctx.from?.id,
+        chatId: ctx.chat?.id,
+      });
+
       await ctx.reply(
         '❌ Сталася помилка при обробці команди /start. Будь ласка, спробуйте ще раз.'
       );
+
+      logger.info('✅ Error message sent successfully', {
+        userId: ctx.from?.id,
+        chatId: ctx.chat?.id,
+      });
     } catch (replyError) {
       logger.error('❌ Failed to send error message in start wrapper', {
         error: replyError instanceof Error ? replyError.message : String(replyError),
+        stack: replyError instanceof Error ? replyError.stack : undefined,
+        userId: ctx.from?.id,
+        chatId: ctx.chat?.id,
       });
     }
   }
@@ -554,19 +576,46 @@ async function startBot() {
           });
 
           // Handle update with timeout to prevent hanging
+          logger.info('🔄 Starting update processing', {
+            updateId,
+            userId: req.body?.message?.from?.id,
+            chatId: req.body?.message?.chat?.id,
+          });
+
           const updatePromise = bot.handleUpdate(req.body);
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('Update handling timeout after 10s')), 10000);
           });
 
-          await Promise.race([updatePromise, timeoutPromise]);
+          try {
+            await Promise.race([updatePromise, timeoutPromise]);
+            const processingTime = Date.now() - startTime;
+            logger.info('✅ Webhook processed successfully', {
+              updateId,
+              processingTime: `${processingTime}ms`,
+              userId: req.body?.message?.from?.id,
+              chatId: req.body?.message?.chat?.id,
+            });
+          } catch (updateError) {
+            const processingTime = Date.now() - startTime;
+            logger.error('❌ Error during update processing', {
+              error: updateError instanceof Error ? updateError.message : String(updateError),
+              stack: updateError instanceof Error ? updateError.stack : undefined,
+              updateId,
+              processingTime: `${processingTime}ms`,
+              userId: req.body?.message?.from?.id,
+              chatId: req.body?.message?.chat?.id,
+              errorType: updateError?.constructor?.name,
+            });
+            // Don't throw - we still want to return 200 to Telegram
+          }
 
-          const processingTime = Date.now() - startTime;
-          logger.info('✅ Webhook processed successfully', {
+          // Always return 200 to Telegram to acknowledge receipt
+          // This prevents Telegram from retrying the update
+          logger.info('📤 Sending 200 response to Telegram', {
             updateId,
-            processingTime: `${processingTime}ms`,
+            processingTime: `${Date.now() - startTime}ms`,
           });
-
           return res.sendStatus(200);
         } catch (error) {
           const processingTime = Date.now() - startTime;
@@ -574,8 +623,9 @@ async function startBot() {
             error: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined,
             updateId,
-            body: req.body,
+            body: req.body ? JSON.stringify(req.body).substring(0, 1000) : null,
             processingTime: `${processingTime}ms`,
+            errorType: error?.constructor?.name,
           });
 
           // Try to send error message to user if possible
@@ -595,7 +645,9 @@ async function startBot() {
             });
           }
 
-          return res.sendStatus(200); // Always return 200 to Telegram to avoid retries
+          // Always return 200 to Telegram to avoid retries
+          // This acknowledges receipt even if processing failed
+          return res.sendStatus(200);
         }
       };
 
@@ -674,6 +726,22 @@ async function startBot() {
                 logger.warn('⚠️ Pending updates detected', {
                   pendingUpdates: status.pendingUpdates,
                 });
+
+                // If there are pending updates, try to clear them
+                // This might indicate that updates are not being processed correctly
+                if (status.pendingUpdates > 5) {
+                  logger.info('🔄 Too many pending updates, attempting to clear them', {
+                    pendingUpdates: status.pendingUpdates,
+                  });
+                  try {
+                    await ensureWebhook('periodic-clear-pending-updates');
+                    logger.info('✅ Pending updates cleared');
+                  } catch (clearError) {
+                    logger.error('❌ Failed to clear pending updates', {
+                      error: clearError instanceof Error ? clearError.message : String(clearError),
+                    });
+                  }
+                }
               }
             } catch (error) {
               logger.error('❌ Error checking webhook status', {
