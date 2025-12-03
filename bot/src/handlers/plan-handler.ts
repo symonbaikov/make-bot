@@ -81,7 +81,6 @@ export async function handlePlanSelection(ctx: BotContext): Promise<void> {
     const emailRequestMessage =
       `✅ Тариф вибрано: ${planConfig.name}\n\n` +
       `💰 Вартість: ${planConfig.amount} GBP\n\n` +
-      `Тепер, будь ласка, надайте вашу адресу електронної пошти:\n\n` +
       `📧 Будь ласка, надішліть мені вашу адресу електронної пошти:`;
 
     await ctx.reply(emailRequestMessage);
