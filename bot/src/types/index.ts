@@ -29,6 +29,7 @@ export interface BotWebhookPayload {
   phoneNumber?: string;
   plan: 'BASIC' | 'STANDARD' | 'PREMIUM';
   amount: number;
+  currency?: string;
 }
 
 export interface ApiResponse<T = unknown> {
@@ -45,4 +46,3 @@ export interface SessionStatus {
   status: string;
   message?: string;
 }
-

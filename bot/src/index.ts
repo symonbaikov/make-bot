@@ -6,6 +6,7 @@ import { handleStart } from './handlers/start-handler';
 import { handleEmailInput } from './handlers/email-handler';
 import { handleFirstNameInput, handleLastNameInput } from './handlers/name-handler';
 import { handlePhoneNumberInput } from './handlers/phone-handler';
+import { handlePlanSelection } from './handlers/plan-handler';
 import { handleHelp } from './handlers/help-handler';
 import { handleError } from './handlers/error-handler';
 import { logger } from './utils/logger';
@@ -222,6 +223,50 @@ bot.help(async ctx => {
   }
 });
 
+// Handle callback queries (button clicks) - plan selection
+bot.on('callback_query', async ctx => {
+  try {
+    // Type guard for callback query with data
+    if (!('data' in ctx.callbackQuery)) {
+      logger.warn('Callback query without data', {
+        userId: ctx.from?.id,
+        callbackQueryType: ctx.callbackQuery,
+      });
+      await ctx.answerCbQuery('❌ Невідома команда. Будь ласка, використайте /start.');
+      return;
+    }
+
+    const callbackData = ctx.callbackQuery.data;
+
+    logger.info('Callback query received', {
+      callbackData,
+      userId: ctx.from?.id,
+      chatId: ctx.chat?.id,
+    });
+
+    // Handle plan selection
+    if (callbackData && callbackData.startsWith('plan:')) {
+      await handlePlanSelection(ctx);
+    } else {
+      logger.warn('Unknown callback query', {
+        callbackData,
+        userId: ctx.from?.id,
+      });
+      await ctx.answerCbQuery('❌ Невідома команда. Будь ласка, використайте /start.');
+    }
+  } catch (error) {
+    logger.error('Error handling callback query', {
+      error: error instanceof Error ? error.message : String(error),
+      userId: ctx.from?.id,
+    });
+    try {
+      await ctx.answerCbQuery('❌ Сталася помилка. Будь ласка, спробуйте ще раз.');
+    } catch (replyError) {
+      logger.error('Failed to answer callback query', replyError);
+    }
+  }
+});
+
 // Text messages (data collection)
 bot.on('text', async ctx => {
   try {
@@ -242,7 +287,10 @@ bot.on('text', async ctx => {
     }
 
     // Check what data we're waiting for
-    if (ctx.session?.waitingForEmail) {
+    if (ctx.session?.waitingForPlan) {
+      // User should select plan via button, not text
+      await ctx.reply('👆 Будь ласка, оберіть тариф, натиснувши на одну з кнопок вище.');
+    } else if (ctx.session?.waitingForEmail) {
       await handleEmailInput(ctx);
     } else if (ctx.session?.waitingForFirstName) {
       await handleFirstNameInput(ctx);

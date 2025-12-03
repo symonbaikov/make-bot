@@ -6,6 +6,7 @@ import { Error } from '../components/Error';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 import { useState } from 'react';
+import { getPlanDisplay } from '../utils/plan';
 
 export function PaymentDetails() {
   const { id } = useParams<{ id: string }>();
@@ -91,7 +92,7 @@ export function PaymentDetails() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-500">План</label>
-            <p className="mt-1 text-sm text-gray-900">{session.plan}</p>
+            <p className="mt-1 text-sm text-gray-900">{getPlanDisplay(session.plan)}</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-500">Сума</label>

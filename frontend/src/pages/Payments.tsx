@@ -12,6 +12,7 @@ import { GlassCard } from '../components/ui/GlassCard';
 import { Button3D } from '../components/ui/Button3D';
 import { motion } from 'framer-motion';
 import { Search, Filter, Calendar, Mail, Eye } from 'lucide-react';
+import { getPlanDisplay, getPlanName } from '../utils/plan';
 
 export function Payments() {
   const [params, setParams] = useState<ListSessionsParams>({
@@ -104,7 +105,7 @@ export function Payments() {
                 <option value="" className="bg-surface">Всі</option>
                 {PlanValues.map(plan => (
                   <option key={plan} value={plan} className="bg-surface">
-                    {plan}
+                    {getPlanName(plan)}
                   </option>
                 ))}
               </select>
@@ -181,7 +182,7 @@ export function Payments() {
                         {session.finalEmail || session.emailUser || session.emailPaypal || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {session.plan}
+                        {getPlanDisplay(session.plan)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                         ${session.amount} {session.currency}

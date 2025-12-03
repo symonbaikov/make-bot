@@ -3,6 +3,8 @@ import { Context } from 'telegraf';
 export interface BotSession {
   plan?: 'BASIC' | 'STANDARD' | 'PREMIUM';
   amount?: number;
+  currency?: string;
+  waitingForPlan?: boolean;
   waitingForEmail?: boolean;
   waitingForFirstName?: boolean;
   waitingForLastName?: boolean;

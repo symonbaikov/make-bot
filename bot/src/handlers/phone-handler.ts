@@ -58,6 +58,7 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
         phoneNumber: ctx.session.phoneNumber,
         plan: ctx.session.plan || 'STANDARD',
         amount: ctx.session.amount || 99.99,
+        currency: ctx.session.currency || 'GBP',
       });
 
       logger.info('User data sent to backend successfully', {
@@ -66,6 +67,8 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
         firstName: ctx.session.firstName,
         lastName: ctx.session.lastName,
         phoneNumber: ctx.session.phoneNumber,
+        plan: ctx.session.plan,
+        amount: ctx.session.amount,
         userId: tgUserId,
       });
 

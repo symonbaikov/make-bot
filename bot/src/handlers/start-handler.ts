@@ -1,5 +1,6 @@
 import { BotContext } from '../middleware/session-middleware';
 import { logger } from '../utils/logger';
+import { getPlanKeyboard } from './plan-handler';
 
 export async function handleStart(ctx: BotContext): Promise<void> {
   try {
@@ -14,14 +15,10 @@ export async function handleStart(ctx: BotContext): Promise<void> {
       ctx.session = {};
     }
 
-    // Start data collection - no sessionId needed
-    ctx.session.waitingForEmail = true;
+    // Start with plan selection
+    ctx.session.waitingForPlan = true;
 
-    // Set default plan and amount
-    ctx.session.plan = 'STANDARD';
-    ctx.session.amount = 99.99;
-
-    logger.info('Session initialized for data collection', {
+    logger.info('Session initialized for plan selection', {
       userId: ctx.from?.id,
       processingTime: Date.now() - startTime,
     });
@@ -29,8 +26,13 @@ export async function handleStart(ctx: BotContext): Promise<void> {
     const welcomeMessage =
       `✋ Вітаю\n\n` +
       `Ви вже майже розпочали навчання!\n\n` +
-      `Залиште, будь ласка, свої контактні дані, щоб я могла надіслати вам доступ до курсу.\n\n` +
-      `📧 Будь ласка, надішліть мені вашу адресу електронної пошти:`;
+      `Будь ласка, оберіть тариф, який вам підходить:\n\n` +
+      `📦 **Базовий** - 64 GBP\n` +
+      `⭐ **Стандарт** - 97 GBP\n` +
+      `💎 **Преміум** - 147 GBP\n\n` +
+      `Натисніть на кнопку з тарифом, який ви хочете обрати:`;
+
+    const planKeyboard = getPlanKeyboard();
 
     logger.info('Sending welcome message', {
       userId: ctx.from?.id,
@@ -47,7 +49,10 @@ export async function handleStart(ctx: BotContext): Promise<void> {
         messagePreview: welcomeMessage.substring(0, 50),
       });
 
-      const replyResult = await ctx.reply(welcomeMessage);
+      const replyResult = await ctx.reply(welcomeMessage, {
+        reply_markup: planKeyboard,
+        parse_mode: 'Markdown',
+      });
 
       logger.info('✅ Welcome message sent successfully', {
         userId: ctx.from?.id,

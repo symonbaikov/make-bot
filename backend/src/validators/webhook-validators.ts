@@ -12,6 +12,7 @@ export const botWebhookSchema = z.object({
     errorMap: () => ({ message: 'Invalid plan' }),
   }),
   amount: z.number().positive('Amount must be positive'),
+  currency: z.string().optional().default('GBP'),
 });
 
 export const paypalWebhookSchema = z.object({

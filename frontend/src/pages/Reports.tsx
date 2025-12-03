@@ -230,9 +230,9 @@ export function Reports() {
               className="w-full px-4 py-3 bg-white/5 border border-glass-border rounded-xl text-white focus:outline-none focus:border-primary transition-colors"
             >
               <option value="all">Всі плани</option>
-              <option value="basic">Basic</option>
-              <option value="standard">Standard</option>
-              <option value="premium">Premium</option>
+              <option value="basic">Базовий</option>
+              <option value="standard">Стандарт</option>
+              <option value="premium">Преміум</option>
             </select>
           </div>
 

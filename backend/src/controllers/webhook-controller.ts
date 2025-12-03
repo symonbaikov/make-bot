@@ -36,6 +36,7 @@ export class WebhookController {
         sessionId: data.sessionId as string,
         plan: data.plan as Plan,
         amount: data.amount as number,
+        currency: (data.currency as string | undefined) || 'GBP',
         emailUser: data.email as string | undefined,
         tgUserId: data.tgUserId as string | undefined,
         firstName: data.firstName as string | undefined,
