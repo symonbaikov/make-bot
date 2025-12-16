@@ -3,6 +3,7 @@ import { webhookController } from '../controllers/webhook-controller';
 import { validateBody } from '../utils/validation';
 import { botWebhookSchema, paypalWebhookSchema, makePaypalWebhookSchema } from '../validators/webhook-validators';
 import { webhookLimiter } from '../middleware/rate-limiter';
+import { parseMakePaypalWebhook } from '../middleware/parse-make-paypal-webhook';
 
 const router = Router();
 
@@ -26,6 +27,7 @@ router.post(
 // POST /api/webhook/paypal/make - raw PayPal payload from Make scenario
 router.post(
   '/paypal/make',
+  parseMakePaypalWebhook,
   validateBody(makePaypalWebhookSchema),
   webhookController.makePaypalWebhook
 );

@@ -53,6 +53,7 @@ See `prisma/schema.prisma` for the database schema.
 - `GET /health` - Health check
 - `POST /api/webhook/bot` - Webhook from Telegram bot
 - `POST /api/webhook/paypal` - Webhook from PayPal
+- `POST /api/webhook/paypal/make` - Webhook from Make (PayPal IPN forwarded; accepts JSON or form-encoded body)
 - `POST /api/admin/auth/login` - Admin login
 - `GET /api/admin/payments` - List payments/sessions
 - `GET /api/admin/payments/:id` - Get payment details
@@ -62,4 +63,3 @@ See `prisma/schema.prisma` for the database schema.
 - `GET /api/admin/actions` - Activity log
 - `POST /api/admin/sessions` - Create session manually
 - `GET /api/admin/export` - Export data
-

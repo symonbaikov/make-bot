@@ -321,8 +321,35 @@ function startServer() {
   );
 
   // Body parsing middleware
-  app.use(express.json({ limit: '10mb' }));
+  // Note: `/api/webhook/paypal/make` may receive a non-JSON body (PayPal IPN form-encoded string)
+  // even when the sender sets `Content-Type: application/json`, so we skip JSON parsing there.
+  const jsonParser = express.json({
+    limit: '10mb',
+    verify: (req, _res, buf) => {
+      const reqUrl = (req as any).originalUrl || req.url || '';
+      if (typeof reqUrl === 'string' && reqUrl.startsWith('/api/webhook')) {
+        (req as any).rawBody = buf.toString('utf8');
+      }
+    },
+  });
+  app.use((req, res, next) => {
+    if (req.path === '/api/webhook/paypal/make') {
+      return next();
+    }
+    return jsonParser(req, res, next);
+  });
+
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // If Make forwards IPN as "raw text" with a mismatched content-type, capture it as text
+  // before request logging and route validation.
+  const makePaypalTextParser = express.text({ type: '*/*', limit: '10mb' });
+  app.use((req, res, next) => {
+    if (req.path === '/api/webhook/paypal/make') {
+      return makePaypalTextParser(req, res, next);
+    }
+    return next();
+  });
 
   // Sentry request handler (must be before other middleware)
   // Note: Sentry handlers are set up via initSentry() in utils/sentry.ts

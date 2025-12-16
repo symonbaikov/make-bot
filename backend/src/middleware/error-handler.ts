@@ -10,6 +10,20 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ): void {
+  const errAny = err as any;
+
+  // Body-parser / Express parsing errors (e.g. invalid JSON)
+  const parseErrorType = typeof errAny?.type === 'string' ? errAny.type : undefined;
+  const parseStatus = typeof errAny?.status === 'number' ? errAny.status : undefined;
+  if (parseErrorType === 'entity.parse.failed' && parseStatus === 400) {
+    sendError(res, 'Invalid JSON in request body', 'INVALID_JSON', 400);
+    return;
+  }
+  if (parseErrorType === 'entity.too.large' && parseStatus === 413) {
+    sendError(res, 'Request body too large', 'PAYLOAD_TOO_LARGE', 413);
+    return;
+  }
+
   // Log error with context
   logger.error('Error occurred:', {
     error: err.message,
@@ -51,4 +65,3 @@ export function errorHandler(
   
   sendError(res, errorMessage, 'INTERNAL_ERROR', 500);
 }
-

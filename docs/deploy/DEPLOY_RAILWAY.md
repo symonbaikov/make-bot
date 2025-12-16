@@ -128,6 +128,7 @@ npm run db:seed
 2. Обновите webhook URL'ы на публичные:
    - Backend API: `https://your-backend.railway.app/api/webhook/bot`
    - Backend API: `https://your-backend.railway.app/api/webhook/paypal`
+   - (Опционально) Make → Backend для PayPal IPN: `https://your-backend.railway.app/api/webhook/paypal/make` (можно отправлять JSON или form-encoded строку)
 3. Обновите PostgreSQL подключение в Make на Railway DATABASE_URL
 
 ### 8. Настроить Telegram Bot Webhook
@@ -193,4 +194,3 @@ curl -X POST "https://api.telegram.org/bot<TOKEN>/deleteWebhook"
 - [Railway Documentation](https://docs.railway.app)
 - [Vercel Documentation](https://vercel.com/docs)
 - [Prisma Deployment](https://www.prisma.io/docs/guides/deployment)
-

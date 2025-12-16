@@ -6,15 +6,37 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
 
   // Special logging for webhook endpoints
   if (req.path.startsWith('/api/webhook')) {
+    const body = req.body as unknown;
+    const bodyType = typeof body;
+    const isObjectBody = body !== null && bodyType === 'object' && !Buffer.isBuffer(body);
+
+    const bodyForLog = (() => {
+      if (body == null) return 'empty';
+      if (typeof body === 'string') return body.length > 2000 ? body.slice(0, 2000) : body;
+      try {
+        const json = JSON.stringify(body);
+        return json.length > 2000 ? `${json.slice(0, 2000)}…` : json;
+      } catch {
+        return '[unserializable]';
+      }
+    })();
+
     logger.info('🔔 Webhook request received', {
       method: req.method,
       path: req.path,
       contentType: req.get('content-type'),
       contentLength: req.get('content-length'),
-      body: req.body ? JSON.stringify(req.body) : 'empty',
-      bodyType: typeof req.body,
-      bodyKeys: req.body ? Object.keys(req.body) : [],
-      isEmpty: !req.body || Object.keys(req.body).length === 0,
+      body: bodyForLog,
+      bodyType,
+      bodyKeys: isObjectBody ? Object.keys(body as any) : [],
+      isEmpty:
+        body == null
+          ? true
+          : typeof body === 'string'
+            ? body.trim().length === 0
+            : isObjectBody
+              ? Object.keys(body as any).length === 0
+              : false,
       rawBody: (req as any).rawBody ? String((req as any).rawBody?.substring(0, 500)) : undefined,
     });
   }
