@@ -181,6 +181,99 @@ function extractFirstJsonValue(input: string): string | null {
   return null;
 }
 
+function parseLooseJsonObject(input: string): Record<string, string> | null {
+  const start = input.indexOf('{');
+  const end = input.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) return null;
+
+  const slice = input.slice(start + 1, end);
+  const result: Record<string, string> = {};
+
+  let i = 0;
+  const len = slice.length;
+
+  const skipWhitespaceAndCommas = (): void => {
+    while (i < len) {
+      const ch = slice[i];
+      if (ch === ',' || /\s/.test(ch)) {
+        i++;
+        continue;
+      }
+      break;
+    }
+  };
+
+  const readJsonString = (): string | null => {
+    if (slice[i] !== '"') return null;
+    i++; // skip opening quote
+    let out = '';
+    let escapeNext = false;
+    while (i < len) {
+      const ch = slice[i++];
+      if (escapeNext) {
+        out += ch;
+        escapeNext = false;
+        continue;
+      }
+      if (ch === '\\') {
+        escapeNext = true;
+        continue;
+      }
+      if (ch === '"') {
+        return out;
+      }
+      out += ch;
+    }
+    return out; // unterminated string; best-effort
+  };
+
+  const readUntilCommaOrEnd = (): string => {
+    let out = '';
+    while (i < len) {
+      const ch = slice[i];
+      if (ch === ',') break;
+      out += ch;
+      i++;
+    }
+    return out.trim();
+  };
+
+  while (i < len) {
+    skipWhitespaceAndCommas();
+    if (i >= len) break;
+    if (slice[i] !== '"') {
+      i++;
+      continue;
+    }
+
+    const key = readJsonString();
+    if (!key) break;
+
+    // Skip whitespace then colon
+    while (i < len && /\s/.test(slice[i])) i++;
+    if (slice[i] !== ':') continue;
+    i++; // skip colon
+    while (i < len && /\s/.test(slice[i])) i++;
+
+    let value: string | null = null;
+    if (slice[i] === '"') {
+      const raw = readJsonString();
+      value = raw == null ? null : raw;
+    } else {
+      value = readUntilCommaOrEnd();
+    }
+
+    if (value != null) {
+      result[key] = value;
+    }
+
+    // Move past comma if present
+    if (slice[i] === ',') i++;
+  }
+
+  return Object.keys(result).length > 0 ? result : null;
+}
+
 function tryParseJsonWithRepairs(
   raw: string,
   maxDepth = 2
@@ -216,7 +309,15 @@ function tryParseJsonWithRepairs(
     const repaired = stripTrailingCommas(escapeRawControlCharsInJsonStrings(value));
     if (repaired !== value) {
       try {
-        return { parsed: JSON.parse(repaired) as unknown };
+        const parsed = JSON.parse(repaired) as unknown;
+        if (typeof parsed === 'string' && depth < maxDepth) {
+          const nested = parsed.replace(/^\uFEFF/, '').trim();
+          if (nested) {
+            queue.push({ value: nested, depth: depth + 1 });
+          }
+          continue;
+        }
+        return { parsed };
       } catch (error) {
         if (!firstError) {
           firstError = error instanceof Error ? error.message : String(error);
@@ -321,6 +422,28 @@ export function parseMakePaypalWebhook(req: Request, res: Response, next: NextFu
       req.body = normalizeToPaypalIpnShape(parsed);
       next();
       return;
+    }
+
+    const looseCandidate =
+      trimmed.includes('"transaction_id"') ||
+      trimmed.includes('"transactionId"') ||
+      trimmed.includes('"txn_id"') ||
+      trimmed.includes('"order_id"') ||
+      trimmed.includes('"payment_system"') ||
+      trimmed.includes('"payment_status"') ||
+      trimmed.includes('"payer_email"') ||
+      trimmed.includes('"email"');
+    if (looseCandidate) {
+      const loose = parseLooseJsonObject(trimmed);
+      if (loose) {
+        logger.warn('Loosely parsed Make PayPal webhook body as JSON object (non-strict sender)', {
+          contentType: req.get('content-type'),
+          sample: trimmed.slice(0, 250),
+        });
+        req.body = normalizeToPaypalIpnShape(loose);
+        next();
+        return;
+      }
     }
 
     logger.warn('Failed to JSON.parse Make PayPal webhook body, will try form parsing', {
