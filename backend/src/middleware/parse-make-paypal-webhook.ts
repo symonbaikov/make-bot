@@ -21,11 +21,13 @@ function escapeRawNewlinesInJsonStrings(input: string): string {
     // inString === true
     if (escapeNext) {
       if (ch === '\n') {
+        out = out.slice(0, -1);
         out += '\\n';
         escapeNext = false;
         continue;
       }
       if (ch === '\r') {
+        out = out.slice(0, -1);
         out += '\\r';
         escapeNext = false;
         continue;
