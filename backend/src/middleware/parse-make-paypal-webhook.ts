@@ -20,6 +20,16 @@ function escapeRawNewlinesInJsonStrings(input: string): string {
 
     // inString === true
     if (escapeNext) {
+      if (ch === '\n') {
+        out += '\\n';
+        escapeNext = false;
+        continue;
+      }
+      if (ch === '\r') {
+        out += '\\r';
+        escapeNext = false;
+        continue;
+      }
       out += ch;
       escapeNext = false;
       continue;
