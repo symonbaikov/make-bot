@@ -2,10 +2,29 @@ import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import { sendError } from '../utils/response';
 
-function escapeRawNewlinesInJsonStrings(input: string): string {
+function escapeRawControlCharsInJsonStrings(input: string): string {
   let inString = false;
   let escapeNext = false;
   let out = '';
+
+  const escapeControl = (ch: string): string => {
+    switch (ch) {
+      case '\b':
+        return '\\b';
+      case '\f':
+        return '\\f';
+      case '\n':
+        return '\\n';
+      case '\r':
+        return '\\r';
+      case '\t':
+        return '\\t';
+      default: {
+        const code = ch.charCodeAt(0);
+        return `\\u${code.toString(16).padStart(4, '0')}`;
+      }
+    }
+  };
 
   for (let i = 0; i < input.length; i++) {
     const ch = input[i];
@@ -20,15 +39,9 @@ function escapeRawNewlinesInJsonStrings(input: string): string {
 
     // inString === true
     if (escapeNext) {
-      if (ch === '\n') {
+      if (ch.charCodeAt(0) < 0x20) {
         out = out.slice(0, -1);
-        out += '\\n';
-        escapeNext = false;
-        continue;
-      }
-      if (ch === '\r') {
-        out = out.slice(0, -1);
-        out += '\\r';
+        out += escapeControl(ch);
         escapeNext = false;
         continue;
       }
@@ -49,13 +62,9 @@ function escapeRawNewlinesInJsonStrings(input: string): string {
       continue;
     }
 
-    // JSON strings cannot contain raw CR/LF
-    if (ch === '\n') {
-      out += '\\n';
-      continue;
-    }
-    if (ch === '\r') {
-      out += '\\r';
+    // JSON strings cannot contain raw ASCII control characters.
+    if (ch.charCodeAt(0) < 0x20) {
+      out += escapeControl(ch);
       continue;
     }
 
@@ -63,6 +72,168 @@ function escapeRawNewlinesInJsonStrings(input: string): string {
   }
 
   return out;
+}
+
+function stripTrailingCommas(input: string): string {
+  let inString = false;
+  let escapeNext = false;
+  let out = '';
+
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+
+    if (!inString) {
+      if (ch === '"') {
+        inString = true;
+        out += ch;
+        continue;
+      }
+
+      if (ch === ',') {
+        let j = i + 1;
+        while (j < input.length && /\s/.test(input[j])) j++;
+        const next = input[j];
+        if (next === '}' || next === ']') {
+          continue;
+        }
+      }
+
+      out += ch;
+      continue;
+    }
+
+    if (escapeNext) {
+      out += ch;
+      escapeNext = false;
+      continue;
+    }
+
+    if (ch === '\\') {
+      out += ch;
+      escapeNext = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = false;
+      out += ch;
+      continue;
+    }
+
+    out += ch;
+  }
+
+  return out;
+}
+
+function extractFirstJsonValue(input: string): string | null {
+  let inString = false;
+  let escapeNext = false;
+  let start = -1;
+  const stack: Array<'{' | '['> = [];
+
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+
+    if (inString) {
+      if (escapeNext) {
+        escapeNext = false;
+        continue;
+      }
+      if (ch === '\\') {
+        escapeNext = true;
+        continue;
+      }
+      if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (start === -1) {
+      if (ch === '{' || ch === '[') {
+        start = i;
+        stack.push(ch);
+      }
+      continue;
+    }
+
+    if (ch === '{' || ch === '[') {
+      stack.push(ch);
+      continue;
+    }
+
+    if (ch === '}' || ch === ']') {
+      const open = stack.pop();
+      if (!open) return null;
+      if ((open === '{' && ch !== '}') || (open === '[' && ch !== ']')) return null;
+      if (stack.length === 0) {
+        return input.slice(start, i + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
+function tryParseJsonWithRepairs(
+  raw: string,
+  maxDepth = 2
+): { parsed: unknown | null; error?: string } {
+  const queue: Array<{ value: string; depth: number }> = [{ value: raw, depth: 0 }];
+  const seen = new Set<string>();
+  let firstError: string | undefined;
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) break;
+    const { value, depth } = current;
+    if (seen.has(value)) continue;
+    seen.add(value);
+
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (typeof parsed === 'string' && depth < maxDepth) {
+        const nested = parsed.replace(/^\uFEFF/, '').trim();
+        if (nested) {
+          queue.push({ value: nested, depth: depth + 1 });
+        }
+        continue;
+      }
+      return { parsed };
+    } catch (error) {
+      if (!firstError) {
+        firstError = error instanceof Error ? error.message : String(error);
+      }
+      // continue with repair candidates
+    }
+
+    const repaired = stripTrailingCommas(escapeRawControlCharsInJsonStrings(value));
+    if (repaired !== value) {
+      try {
+        return { parsed: JSON.parse(repaired) as unknown };
+      } catch (error) {
+        if (!firstError) {
+          firstError = error instanceof Error ? error.message : String(error);
+        }
+        // continue
+      }
+    }
+
+    if (depth < maxDepth) {
+      const extracted = extractFirstJsonValue(value);
+      if (extracted && extracted !== value) {
+        queue.push({ value: extracted, depth: depth + 1 });
+      }
+    }
+  }
+
+  return { parsed: null, error: firstError };
 }
 
 function parseUrlEncodedToObject(input: string): Record<string, string> {
@@ -137,34 +308,31 @@ export function parseMakePaypalWebhook(req: Request, res: Response, next: NextFu
     return;
   }
 
-  // Try JSON first (valid JSON object/array).
-  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-    try {
-      req.body = normalizeToPaypalIpnShape(JSON.parse(trimmed) as unknown);
+  // Try JSON first (valid JSON object/array) and apply safe repairs for common sender issues.
+  const looksLikeJson =
+    trimmed.startsWith('{') ||
+    trimmed.startsWith('[') ||
+    trimmed.startsWith('"') ||
+    trimmed.includes('{') ||
+    trimmed.includes('[');
+  if (looksLikeJson) {
+    const { parsed, error } = tryParseJsonWithRepairs(trimmed);
+    if (parsed != null && (typeof parsed === 'object' || Array.isArray(parsed))) {
+      req.body = normalizeToPaypalIpnShape(parsed);
       next();
       return;
-    } catch (error) {
-      logger.warn('Failed to JSON.parse Make PayPal webhook body, will try form parsing', {
-        error: error instanceof Error ? error.message : String(error),
-        contentType: req.get('content-type'),
-        sample: trimmed.slice(0, 250),
-      });
-
-      // Some senders embed raw newlines inside string values; try a safe repair pass.
-      try {
-        const repaired = escapeRawNewlinesInJsonStrings(trimmed);
-        req.body = normalizeToPaypalIpnShape(JSON.parse(repaired) as unknown);
-        next();
-        return;
-      } catch {
-        // continue to form parsing / error below
-      }
     }
+
+    logger.warn('Failed to JSON.parse Make PayPal webhook body, will try form parsing', {
+      error,
+      contentType: req.get('content-type'),
+      sample: trimmed.slice(0, 250),
+    });
   }
 
   // Fallback: treat as application/x-www-form-urlencoded (PayPal IPN-style).
   // Only attempt if it looks like a querystring; otherwise we'd mis-parse arbitrary text/JSON.
-  if (!trimmed.includes('=') && !trimmed.includes('&')) {
+  if (!trimmed.includes('=')) {
     sendError(
       res,
       'Invalid request body. Expected JSON (object/array) or a form-encoded PayPal IPN string.',
