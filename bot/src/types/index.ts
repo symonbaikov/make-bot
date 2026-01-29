@@ -22,7 +22,7 @@ export interface UserData {
 
 export interface BotWebhookPayload {
   sessionId: string;
-  email: string;
+  email?: string;
   tgUserId: string;
   firstName?: string;
   lastName?: string;

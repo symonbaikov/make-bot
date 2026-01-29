@@ -72,7 +72,7 @@ describe('Plan Handler', () => {
     expect(mockCtx.session?.amount).toBe(64);
     expect(mockCtx.session?.currency).toBe('GBP');
     expect(mockCtx.session?.waitingForPlan).toBe(false);
-    expect(mockCtx.session?.waitingForEmail).toBe(true);
+    expect(mockCtx.session?.waitingForFirstName).toBe(true);
   });
 
   it('should handle STANDARD plan selection', async () => {
@@ -114,7 +114,7 @@ describe('Plan Handler', () => {
     const callArgs = (mockCtx.reply as jest.Mock).mock.calls[0];
     expect(callArgs[0]).toContain('Тариф вибрано');
     expect(callArgs[0]).toContain('64 GBP');
-    expect(callArgs[0]).toContain('електронної пошти');
+    expect(callArgs[0]).toContain('ім\'я');
   });
 
   it('should reject invalid plan type', async () => {

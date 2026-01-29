@@ -42,16 +42,12 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
         throw new Error('Telegram user ID is missing');
       }
 
-      if (!ctx.session.email) {
-        throw new Error('Email is missing');
-      }
-
       // Generate session ID only when sending to webhook (backend requires it)
       const sessionId = `tg-${tgUserId}-${Date.now()}`;
 
       await apiClient.sendBotWebhook({
         sessionId: sessionId,
-        email: ctx.session.email,
+        email: ctx.session.email || '',
         tgUserId: tgUserId,
         firstName: ctx.session.firstName,
         lastName: ctx.session.lastName,
@@ -74,7 +70,6 @@ export async function handlePhoneNumberInput(ctx: BotContext): Promise<void> {
 
       await ctx.reply(
         `✅ Дякуємо! Ваша інформація отримана та збережена.\n\n` +
-          `📧 Email: ${ctx.session.email}\n` +
           `👤 Ім'я: ${ctx.session.firstName || ''} ${ctx.session.lastName || ''}\n` +
           `📱 Телефон: ${ctx.session.phoneNumber}\n\n` +
           `Ви можете повернутися на сторінку для завершення оплати.\n\n` +

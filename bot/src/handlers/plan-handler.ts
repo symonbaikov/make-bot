@@ -66,7 +66,7 @@ export async function handlePlanSelection(ctx: BotContext): Promise<void> {
     ctx.session.amount = planConfig.amount;
     ctx.session.currency = 'GBP'; // Set currency to GBP
     ctx.session.waitingForPlan = false;
-    ctx.session.waitingForEmail = true;
+    ctx.session.waitingForFirstName = true;
 
     logger.info('Plan selected', {
       plan: planType,
@@ -77,13 +77,13 @@ export async function handlePlanSelection(ctx: BotContext): Promise<void> {
     // Answer callback query
     await ctx.answerCbQuery(`✅ Вибрано тариф: ${planConfig.name}`);
 
-    // Send confirmation and request email
-    const emailRequestMessage =
+    // Send confirmation and request name
+    const nameRequestMessage =
       `✅ Тариф вибрано: ${planConfig.name}\n\n` +
       `💰 Вартість: ${planConfig.amount} GBP\n\n` +
-      `📧 Будь ласка, надішліть мені вашу адресу електронної пошти:`;
+      `👤 Тепер, будь ласка, напишіть ваше ім'я:`;
 
-    await ctx.reply(emailRequestMessage);
+    await ctx.reply(nameRequestMessage);
   } catch (error) {
     logger.error('Error in plan selection handler', error);
     try {

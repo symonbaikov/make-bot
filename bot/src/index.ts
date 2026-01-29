@@ -3,7 +3,6 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { sessionMiddleware, BotContext } from './middleware/session-middleware';
 import { handleStart } from './handlers/start-handler';
-import { handleEmailInput } from './handlers/email-handler';
 import { handleFirstNameInput, handleLastNameInput } from './handlers/name-handler';
 import { handlePhoneNumberInput } from './handlers/phone-handler';
 import { handlePlanSelection } from './handlers/plan-handler';
@@ -316,8 +315,6 @@ bot.on('text', async ctx => {
     if (ctx.session?.waitingForPlan) {
       // User should select plan via button, not text
       await ctx.reply('👆 Будь ласка, оберіть тариф, натиснувши на одну з кнопок вище.');
-    } else if (ctx.session?.waitingForEmail) {
-      await handleEmailInput(ctx);
     } else if (ctx.session?.waitingForFirstName) {
       await handleFirstNameInput(ctx);
     } else if (ctx.session?.waitingForLastName) {

@@ -14,10 +14,7 @@ describe('Bot Handlers Registration', () => {
     expect(typeof handlePlanSelection).toBe('function');
   });
 
-  it('should export handleEmailInput function', () => {
-    const { handleEmailInput } = require('../handlers/email-handler');
-    expect(typeof handleEmailInput).toBe('function');
-  });
+
 
   it('should export getPlanKeyboard function', () => {
     const { getPlanKeyboard } = require('../handlers/plan-handler');

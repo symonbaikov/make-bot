@@ -44,3 +44,17 @@ docker-compose.override.yml
 .temp/
 *.pem
 
+.DS_Store
+node_modules/
+dist/
+build/
+.next/
+out/
+.env
+.env.*
+*.log
+.cache/
+.turbo/
+# macOS metadata
+.DS_Store
+._*

@@ -3,7 +3,7 @@ import { Plan } from '@prisma/client';
 
 export const botWebhookSchema = z.object({
   sessionId: z.string().min(1, 'Session ID is required'),
-  email: z.string().email('Invalid email format'),
+  email: z.string().email('Invalid email format').optional().or(z.literal('')),
   tgUserId: z.string().min(1, 'Telegram user ID is required'),
   firstName: z.string().optional(),
   lastName: z.string().optional(),

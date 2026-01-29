@@ -1,7 +1,7 @@
 import { BotContext } from '../middleware/session-middleware';
 import { handleStart } from '../handlers/start-handler';
 import { handlePlanSelection } from '../handlers/plan-handler';
-import { handleEmailInput } from '../handlers/email-handler';
+import { handleFirstNameInput } from '../handlers/name-handler';
 
 // Mock logger
 jest.mock('../utils/logger', () => ({
@@ -48,7 +48,7 @@ describe('Bot Integration Flow', () => {
     };
   });
 
-  it('should complete full flow: start -> plan selection -> email', async () => {
+  it('should complete full flow: start -> plan selection -> name', async () => {
     // Step 1: User sends /start
     const ctx1: BotContext = {
       ...mockCtx,
@@ -114,20 +114,20 @@ describe('Bot Integration Flow', () => {
     expect(ctx2.session?.plan).toBe('STANDARD');
     expect(ctx2.session?.amount).toBe(97);
     expect(ctx2.session?.waitingForPlan).toBe(false);
-    expect(ctx2.session?.waitingForEmail).toBe(true);
+    expect(ctx2.session?.waitingForFirstName).toBe(true);
     expect(ctx2.answerCbQuery).toHaveBeenCalled();
     expect(ctx2.reply).toHaveBeenCalledTimes(2);
     const planCall = (ctx2.reply as jest.Mock).mock.calls[1];
     expect(planCall[0]).toContain('Тариф вибрано');
-    expect(planCall[0]).toContain('електронної пошти');
+    expect(planCall[0]).toContain('ім\'я');
 
-    // Step 3: User sends email
+    // Step 3: User sends name
     const ctx3: BotContext = {
       ...ctx2,
       message: {
         message_id: 2,
         date: Date.now(),
-        text: 'test@example.com',
+        text: 'John',
         chat: {
           id: 123456789,
           type: 'private',
@@ -142,10 +142,11 @@ describe('Bot Integration Flow', () => {
       },
     } as BotContext;
 
-    await handleEmailInput(ctx3);
+    await handleFirstNameInput(ctx3);
 
-    expect(ctx3.session?.email).toBe('test@example.com');
-    expect(ctx3.session?.waitingForEmail).toBe(false);
+    expect(ctx3.session?.firstName).toBe('John');
+    expect(ctx3.session?.waitingForFirstName).toBe(false);
+    expect(ctx3.session?.waitingForLastName).toBe(true);
   });
 
   it('should handle plan selection without waitingForPlan flag', async () => {
